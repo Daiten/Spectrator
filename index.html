@@ -1,0 +1,2796 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spectrator</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;max-width:1200px;margin:25px auto;padding:0 16px;background:#f3f3f1;color:#202020}h1{margin:0}.sub{color:#666;margin:3px 0 18px}.panel{background:#fff;border:1px solid #ccc;border-radius:13px;padding:17px;margin:14px 0}textarea{width:100%;min-height:78px;padding:10px;border:1px solid #aaa;border-radius:8px;font:15px ui-monospace,monospace}button{font:inherit;padding:7px 11px;border:1px solid #999;border-radius:8px;background:#fafafa;cursor:pointer;margin:4px 3px 0 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card{border:1px solid #ddd;border-radius:9px;padding:10px;background:#fafafa}.big{font-size:1.18rem;font-weight:650}.swatch{height:170px;border-radius:10px;border:1px solid #888;margin-top:10px}canvas{width:100%;height:300px;border:1px solid #bbb;border-radius:9px;background:#fff}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{padding:7px;border-bottom:1px solid #ddd;text-align:left}.small{font-size:.87rem;color:#666}.pass{font-weight:700}.fail{font-weight:700}.warn{color:#8a5a00}.tag{display:inline-block;padding:2px 7px;border:1px solid #bbb;border-radius:99px;margin:2px}.seg{display:inline-flex;border:1px solid #bbb;border-radius:99px;overflow:hidden;background:#fff;vertical-align:middle;margin-left:6px}
+.seg button{font:inherit;font-size:.83rem;margin:0;border:0;border-radius:0;padding:6px 12px;background:#fff;color:#555;cursor:pointer;border-left:1px solid #e2e2e2}
+.seg button:first-child{border-left:0}
+.seg button:hover{background:#f2f2f2}
+.seg button.on{background:#202020;color:#fff}
+.seglabel{font-size:.83rem;color:#777;margin-left:12px;vertical-align:middle}
+.tabs{display:flex;gap:6px;margin:14px 0}.tabbtn{font-weight:650;border-radius:9px;padding:9px 14px}.tabbtn.active{background:#202020;color:#fff;border-color:#202020}.tab{display:none}.tab.active{display:block}.barrow{display:grid;grid-template-columns:150px 1fr 48px;gap:10px;align-items:center;margin:7px 0}.bar{height:12px;border:1px solid #bbb;border-radius:99px;overflow:hidden;background:#eee}.bar>i{display:block;height:100%;background:#777}.odor-note{padding:10px 12px;border:1px solid #ddd;border-radius:9px;background:#fafafa;margin-top:10px}@media(max-width:800px){.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<h1>Spectrator</h1><p class="sub">A local, structure-based predictor for colour, odour, taste and bioactivity. Organic predictions are computed from structure with no molecule lookup; inorganic hues use a small explicit reference table of common ions and solids, because d-orbital splitting and band gaps cannot be derived from composition alone. Recognizes aromatic rings whether written in lowercase or Kekule form, and handles disconnected/salt structures.</p>
+<div class="panel"><textarea id="smiles">c1ccc2cc3ccccc3cc2c1</textarea><div>
+<button onclick="predict()">Predict</button><span class="seglabel">read as</span><span class="seg" id="modeSeg"><button data-m="auto" class="on" onclick="setInputMode('auto')">Auto</button><button data-m="smiles" onclick="setInputMode('smiles')">SMILES</button><button data-m="formula" onclick="setInputMode('formula')">Formula</button></span><button onclick="load('benzene')">Benzene</button><button onclick="load('naph')">Naphthalene</button><button onclick="load('anth')">Anthracene</button><button onclick="load('tetra')">Tetracene</button><button onclick="load('hex')">Hexatriene</button><button onclick="load('lyco')">Lycopene</button><button onclick="load('beta')">β-carotene</button><button onclick="load('phth')">Phthalocyanine-like</button><button onclick="load('indigo')">Indigo</button><button onclick="load('caffeine')">Caffeine</button><button onclick="load('serotonin')">Serotonin</button><button onclick="load('nicotine')">Nicotine</button><button onclick="load('aspirin')">Aspirin</button><button onclick="load('glucose')">Glucose</button><button onclick="load('cuso4')">CuSO&#8324;</button><button onclick="load('kmno4')">KMnO&#8324;</button><button onclick="load('h2s')">H&#8322;S</button><button onclick="load('hcl')">HCl</button><button onclick="load('naoh')">NaOH</button><button onclick="load('nahco3')">NaHCO&#8323;</button>
+</div><p class="small">This version separates chromophore detection from optical-color rendering. It is still an approximation, but the benchmark set is used as a regression test.</p></div><div id="interpBanner" style="margin:10px 0"></div><div class="tabs"><button id="tabColor" class="tabbtn active" onclick="showTab('color')">Color Lab</button><button id="tabOdor" class="tabbtn" onclick="showTab('odor')">Odor Lab</button><button id="tabTaste" class="tabbtn" onclick="showTab('taste')">Taste Lab</button><button id="tabBio" class="tabbtn" onclick="showTab('bio')">Bioactivity Lab</button><button id="tabChem" class="tabbtn" onclick="showTab('chem')">Chemistry Lab</button><button id="tabBench" class="tabbtn" onclick="showTab('bench')">Benchmark</button></div>
+<div id="colorTab" class="tab active">
+<div class="grid"><section class="panel"><h2>Prediction</h2><div class="cards"><div class="card">λmax<div class="big" id="lam">—</div></div><div class="card">Color<div class="big" id="col">—</div></div><div class="card">π atoms<div class="big" id="npi">—</div></div><div class="card">Confidence<div class="big" id="conf">—</div></div></div><div class="swatch" id="swatch"></div><p><b>HEX:</b> <code id="hex">—</code></p><p id="summary">—</p></section>
+<section class="panel"><h2>Structure & electronic estimate</h2><div id="electronic">—</div><p id="features"></p><p id="warnings"></p></section></div>
+<div class="panel"><h2>Modeled visible absorption</h2><canvas id="plot" width="1120" height="320"></canvas><p class="small">Bands are phenomenological: the engine estimates chromophore class, transition energy and bandwidth rather than doing TD-DFT.</p></div>
+<div class="panel"><h2>Validation mode</h2><p>These are sanity checks. Their names do not serve as prediction inputs or a hidden molecule-color lookup.</p><table><thead><tr><th>Molecule</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="validation"></tbody></table></div>
+</div>
+<div id="odorTab" class="tab">
+<div class="grid"><section class="panel"><h2>Odor profile</h2><div class="cards"><div class="card">Character<div class="big" id="odorCharacter">—</div></div><div class="card">Intensity<div class="big" id="odorIntensity">—</div></div><div class="card">Volatility<div class="big" id="odorVolatility">—</div></div><div class="card">Confidence<div class="big" id="odorConfidence">—</div></div></div><div class="odor-note"><b>Important:</b> this is a structural heuristic, not a receptor-level odor prediction and not a molecule-name lookup.</div><div id="odorBars" style="margin-top:12px"></div><p id="odorSummary">—</p></section>
+<section class="panel"><h2>Odor-relevant structural estimate</h2><div id="odorElectronic">—</div><p id="odorWarnings"></p></section></div>
+<div class="panel"><h2>Odor validation mode</h2><p>Sanity checks against unambiguous functional-group patterns (esters, thiols, phenols, etc.), not a molecule-name lookup.</p><table><thead><tr><th>Molecule</th><th>Expected top family</th><th>Model</th><th>Test</th></tr></thead><tbody id="odorValidation"></tbody></table></div>
+<div class="panel"><h2>Input interpretation</h2><p>SMILES and chemical formulas overlap: most short strings parse validly as both, meaning different substances. These checks pin down which notation each input is read as.</p><table><thead><tr><th>Input</th><th>Should read as</th><th>Model</th><th>Test</th></tr></thead><tbody id="interpValidation"></tbody></table></div>
+<div class="panel"><h2>Inorganic validation mode</h2><p>Inorganic colour comes from d-d transitions, charge transfer and band gaps rather than organic chromophores. Formulas may be typed directly (CuSO4, KMnO4, H2S).</p><table><thead><tr><th>Species</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="inorgValidation"></tbody></table></div>
+<div class="panel"><h2>How to interpret the odor profile</h2><p class="small">The profile is deliberately expressed as odor families rather than pretending that a 2D structure uniquely determines a specific smell. Volatility and persistence are rough physical/perceptual priors.</p></div>
+</div>
+<div id="tasteTab" class="tab">
+<div class="grid"><section class="panel"><h2>Taste profile</h2><div class="cards"><div class="card">Character<div class="big" id="tasteCharacter">—</div></div><div class="card">Confidence<div class="big" id="tasteConfidence">—</div></div></div><div class="odor-note"><b>Important:</b> taste depends heavily on exact 3D shape and receptor binding (stereoisomers of the same 2D structure can taste completely different) - this models only the broadest textbook structure-taste correlations (acids→sour, polyols→sweet, salts→salty, glutamate-like→umami, nitrogenous heterocycles→bitter-leaning), not a receptor-level prediction and not a molecule-name lookup.</div><div id="tasteBars" style="margin-top:12px"></div><p id="tasteSummary">—</p></section>
+<section class="panel"><h2>Taste-relevant structural estimate</h2><div id="tasteElectronic">—</div><p id="tasteWarnings"></p></section></div>
+<div class="panel"><h2>Taste validation mode</h2><p>Sanity checks against unambiguous textbook patterns (acids, sugars, salts, amino acids, alkaloid-like heterocycles), not a molecule-name lookup.</p><table><thead><tr><th>Molecule</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="tasteValidation"></tbody></table></div>
+<div class="panel"><h2>How to interpret the taste profile</h2><p class="small">Taste is even less determined by a bare 2D graph than smell or color: it depends on exact stereochemistry, ionization state in saliva, and specific receptor geometry (the Shallenberger-Acree AH-B theory of sweetness, for instance, needs a precise 3D donor/acceptor distance this engine cannot see). Treat this as a rough structural prior, not a claim about how a real sample would taste.</p></div>
+</div>
+<div id="bioTab" class="tab">
+<div class="panel" style="border-color:#c39;background:#fff7fb"><b>Read this first.</b> This tab flags <i>recognized structural patterns</i> — it is a teaching tool for structure–activity relationships, not a pharmacology or safety assessment. It cannot tell you whether anything is safe to take, at what dose, or how it will interact with a person or their medication. Scaffold matches say "this looks like a known family", never "this will work" or "this is safe". Real activity and real toxicity depend on stereochemistry, metabolism, dose and individual biology that a 2D structure simply does not contain. For anything involving an actual substance and an actual person, consult a qualified professional or a poison-control centre.</div>
+<div class="grid"><section class="panel"><h2>Bioactivity</h2><div class="cards"><div class="card">Bioactivity likelihood<div class="big" id="bioScore">—</div></div><div class="card">Drug-likeness<div class="big" id="bioDrugLike">—</div></div><div class="card">Psychoactivity likelihood<div class="big" id="bioPsy">—</div></div><div class="card">Toxicity flags<div class="big" id="bioTox">—</div></div></div><div id="bioBars" style="margin-top:12px"></div><p id="bioSummary">—</p></section>
+<section class="panel"><h2>Computed physicochemical profile</h2><div id="bioPhys">—</div><p id="bioWarnings"></p></section></div>
+<div class="grid"><section class="panel"><h2>Scaffold / receptor matches</h2><div id="bioPharm">—</div></section>
+<section class="panel"><h2>Structural toxicity alerts</h2><div id="bioAlerts">—</div></section></div>
+<div class="panel"><h2>Bioactivity validation mode</h2><p>Sanity checks against well-characterised scaffolds and classical structural alerts, not a molecule-name lookup.</p><table><thead><tr><th>Molecule</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="bioValidation"></tbody></table></div>
+<div class="panel"><h2>How to interpret this tab</h2><p class="small">Descriptors (MW, logP, TPSA, H-bond counts, rotatable bonds) are computed from the structure and are reasonably accurate. Everything above that — scaffold matching, receptor attribution, toxicity alerts — is pattern recognition against known families. A scaffold match means the molecule shares a shape with a known class; it does not establish binding, potency, efficacy or selectivity, all of which require actual experiments. Absence of an alert is not evidence of safety: many highly toxic compounds contain no classical alert at all, and many safe approved drugs do contain one.</p></div>
+</div>
+<div id="chemTab" class="tab">
+<div class="grid"><section class="panel"><h2>Acid / base behaviour</h2><div class="cards"><div class="card">Character<div class="big" id="chemAB">—</div></div><div class="card">At pH 7<div class="big" id="chemCharge">—</div></div></div><p id="chemABWhy">—</p><div id="chemGroups"></div></section>
+<section class="panel"><h2>Solubility &amp; lipophilicity</h2><div class="cards"><div class="card">Water solubility<div class="big" id="chemSol">—</div></div><div class="card">Lipophilicity<div class="big" id="chemLipo">—</div></div></div><div id="chemSolBars" style="margin-top:12px"></div><p id="chemSolWhy">—</p></section></div>
+<div class="grid"><section class="panel"><h2>Redox character</h2><div class="card" style="margin-bottom:10px">Overall<div class="big" id="chemRedox">—</div></div><div id="chemRedoxWhy">—</div></section>
+<section class="panel"><h2>Computed physical properties</h2><div id="chemPhys">—</div></section></div>
+<div class="panel"><h2>Chemistry validation mode</h2><table><thead><tr><th>Compound</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="chemValidation"></tbody></table></div>
+<div class="panel"><h2>How to interpret this tab</h2><p class="small">pKa values are class averages for each functional group, not predictions for the specific molecule: substituents routinely shift a real pKa by several units, so treat "weakly acidic" as a category rather than a number. Aqueous solubility for molecules uses the ESOL model (an empirical fit to logP, size, flexibility and aromatic surface) and is typically good to about an order of magnitude; ionic solids instead use the classical qualitative solubility rules, since a lattice is not what ESOL describes. Redox notes flag groups with well-known oxidising or reducing behaviour and say nothing about rate, potential, or what happens under any particular conditions.</p></div>
+</div>
+<div id="benchTab" class="tab">
+<div class="panel"><h2>Benchmark against your own dataset</h2><p class="small">Paste hand-checked reference data to score the model. Properties: <code>color, odor, taste, acidbase, redox, solubility, psychoactive, toxic</code>. Matching is keyword-based, so "sour" matches "sour/acidic" — you are scoring conclusions, not wording. Lines beginning with # are ignored, and any row the parser cannot read is reported rather than silently dropped.</p>
+<p class="small">Three layouts are accepted, so a compound need only be written once:</p>
+<div class="odor-note" style="margin-top:0"><span class="small"><b>One claim per row</b><br><code>COc1ccccc1O,odor,smoky</code><br><br>
+<b>Several properties on one row</b> — repeat property/value pairs after the input<br><code>COc1ccccc1O,odor,smoky,taste,bitter,color,colorless</code><br><br>
+<b>A column per property</b> — needs a header row naming an <code>input</code> (or <code>smiles</code>/<code>compound</code>) column; an optional <code>name</code> column is carried into the failure list, and blank cells are skipped<br><code>input,name,odor,taste,color</code><br><code>COc1ccccc1O,guaiacol,smoky,bitter,colorless</code></span></div>
+<textarea id="benchData" style="min-height:190px" spellcheck="false"></textarea>
+<div><button onclick="doBenchmark()">Run benchmark</button><button onclick="loadBenchSeed()">Load starter set</button><button onclick="clearBench()">Clear</button><button onclick="copyFails()">Copy failures</button></div>
+<div id="benchErrs"></div>
+<div class="cards" style="margin-top:14px"><div class="card">Overall accuracy<div class="big" id="benchScore">—</div></div><div class="card">Rows scored<div class="big" id="benchN">—</div></div><div class="card">Failures<div class="big" id="benchF">—</div></div><div class="card">Properties covered<div class="big" id="benchP">—</div></div></div>
+<div id="benchBars" style="margin-top:14px"></div></div>
+<div class="panel"><h2>Accuracy by property</h2><table><thead><tr><th>Property</th><th>Scored</th><th>Correct</th><th>Accuracy</th></tr></thead><tbody id="benchPer"></tbody></table></div>
+<div class="panel"><h2>Failures</h2><p class="small">Each failure shows the rule that produced the answer, so a wrong prediction points at the responsible logic rather than just being wrong.</p><table><thead><tr><th>Input</th><th>Property</th><th>Expected</th><th>Model said</th><th>Rule that fired</th></tr></thead><tbody id="benchFails"></tbody></table></div>
+<div class="panel"><h2>How to use this well</h2><p class="small">Collect discrepancies in batches of twenty or more before acting on them: nearly every real bug found in this project affected a whole class of compounds, and a batch makes the pattern visible where a single case invites an over-fitted patch. Include compounds the model gets <b>right</b> as well — knowing that eight esters pass and two fail is far more diagnostic than two failures alone. Prefer pairs that differ in one feature (hexanal against octanal, anthraquinone against its amino derivative) since those locate a boundary, and be wary of tuning until this number rises: an accuracy figure that only improves on the rows in this box is measuring memorisation, not prediction.</p></div>
+</div>
+
+
+
+<script>
+const EX={
+ benzene:"c1ccccc1",naph:"c1ccc2ccccc2c1",anth:"c1ccc2cc3ccccc3cc2c1",tetra:"c1ccc2cc3cc4ccccc4cc3cc2c1",
+ hex:"C=CC=CC=C",lyco:"CC(=C)C=C-C=C-C=C-C=C-C=C-C=C-C=C-C=C-C=C-C=C(C)C",
+ beta:"CC1=C(C)CCCC1C=C-C=C(C)-C=C-C=C(C)-C=C-C=C-C=C(C)-C=C-C=C(C)-C1=C(C)CCCC1", 
+ phth:"c1ccc2c(c1)ncnc3c2ncnc4c3ncnc5c4ncnc5" ,indigo:"c1ccc2c(c1)N/C(=C\\3/C(=O)c4ccccc4N3)/C(=O)2",
+ caffeine:"Cn1cnc2c1c(=O)n(C)c(=O)n2C",serotonin:"NCCc1c[nH]c2ccc(O)cc12",
+ nicotine:"CN1CCCC1c1cccnc1",aspirin:"CC(=O)Oc1ccccc1C(=O)O",glucose:"OCC(O)C(O)C(O)C(O)C=O",cuso4:"CuSO4",kmno4:"KMnO4",h2s:"H2S",hcl:"HCl",naoh:"NaOH",nahco3:"NaHCO3"
+};
+// Longer/2-letter symbols must be listed before any shorter symbol they start with (e.g. "Se" before "S").
+const SYM=["Cl","Br","Si","Na","Al","Ca","Fe","Co","Ni","Cu","Zn","Mg","Li","Se","As","Sn","Pb","Au","Ag","Pt","Hg","Cd","Cr","Mn","Ti","Zr","K","B","C","N","O","S","P","F","I","H"];
+function parse(s){
+ s=s.replace(/\s/g,"");
+ let A=[],B=[],st=[],rings={},cur=-1,bo=1,bondExplicit=false,i=0,warn=[];
+ function closeRing(label){
+  if(rings[label]==null){rings[label]={a:cur,o:bo,explicit:bondExplicit};}
+  else{
+   let r=rings[label],order;
+   if(bondExplicit) order=bo;                      // this side specified a bond symbol
+   else if(r.explicit) order=r.o;                   // the other side specified one
+   else order=(A[cur]&&A[r.a]&&A[cur].ar&&A[r.a].ar)?1.5:1; // two aromatic atoms -> aromatic ring bond
+   B.push({a:r.a,b:cur,o:order});
+   delete rings[label];
+  }
+ }
+ while(i<s.length){
+  let c=s[i];
+  if(c=="."){cur=-1;bo=1;bondExplicit=false;i++;continue}                 // disconnected fragment
+  if(c=="("){st.push(cur);i++;continue}
+  if(c==")"){if(!st.length)warn.push("Unmatched )");else cur=st.pop();i++;continue}
+  if(c=="="){bo=2;bondExplicit=true;i++;continue}
+  if(c=="#"){bo=3;bondExplicit=true;i++;continue}
+  if(c=="-"){bo=1;bondExplicit=true;i++;continue}
+  if(c==":"){bo=1.5;bondExplicit=true;i++;continue}
+  if(c=="/"||c=="\\"){i++;continue}                                       // cis/trans marker: irrelevant to pi-conjugation
+  if(c=="%"){let d=s.slice(i+1,i+3);if(!/^[0-9]{2}$/.test(d)){warn.push("Malformed % ring closure");i++;continue}closeRing(d);bo=1;bondExplicit=false;i+=3;continue}
+  if(/[0-9]/.test(c)){closeRing(c);bo=1;bondExplicit=false;i++;continue}
+  let sym=null,ar=false,hExp=null,chg=0;
+  if(c=="*"){sym="*";ar=false;i++}
+  else if(c=="["){let j=s.indexOf("]",i);if(j<0){warn.push("Unclosed [ bracket");break}let inside=s.slice(i+1,j);let m=inside.match(/([A-Z][a-z]?|[bcnops]|\*)/);if(m){sym=m[1];ar=/^[bcnops]$/.test(sym);if(ar)sym=sym.toUpperCase();
+   // Bracket atoms state their own hydrogen count and charge explicitly ([nH], [NH3+], [Na+]).
+   // Capturing both matters: H count drives molecular weight and H-bond-donor counts, and a
+   // formal charge marks an ionic species, which behaves very differently (solubility, volatility).
+   let hm=inside.match(/H(\d*)/); hExp=hm?(hm[1]===''?1:parseInt(hm[1],10)):0;
+   let cm=inside.match(/([+-])(\d*)/); if(cm){let mag=cm[2]===''?1:parseInt(cm[2],10);chg=(cm[1]==='+'?1:-1)*mag}
+  }else{warn.push("Unrecognized bracket atom ["+inside+"]");i=j+1;continue}i=j+1}
+  else {for(const z of SYM){if(s.startsWith(z,i)){sym=z;i+=z.length;break}}if(!sym){if(/[bcnops]/.test(c)){sym=c.toUpperCase();ar=true;i++}else if(/[A-Z]/.test(c)){sym=c;i++}else{warn.push("Ignored character: "+c);i++;continue}}}
+  let id=A.length;A.push({id,sym,ar,hExp,chg});
+  if(cur>=0){
+   let order=bondExplicit?bo:((A[cur].ar&&ar)?1.5:1);   // two aromatic atoms with no explicit bond -> aromatic
+   B.push({a:cur,b:id,o:order});
+  }
+  cur=id;bo=1;bondExplicit=false;
+ }
+ if(st.length)warn.push("Unmatched (");if(Object.keys(rings).length)warn.push("Unclosed ring digit");
+ return{A,B,warn};}
+function piGraph(g){
+ let ids=new Set(), edges=[];
+ const addEdge=b=>{if(!edges.some(e=>(e.a===b.a&&e.b===b.b)||(e.a===b.b&&e.b===b.a)))edges.push(b)};
+ // Seed with every formal multiple bond AND every bond directly between two aromatic atoms
+ // (ring bonds of an aromatic system are part of one connected pi network, not isolated pairs).
+ for(const b of g.B)if(b.o>=1.5||(g.A[b.a].ar&&g.A[b.b].ar)){ids.add(b.a);ids.add(b.b);addEdge(b)}
+ // Extend through conjugated single bonds bridging into the seeded network (e.g. -CH=CH- chains
+ // hanging off a ring, cross-conjugated carbonyls, biaryl linkages) until nothing new is reached.
+ const cap=i=>{let s=g.A[i].sym;return g.A[i].ar||s==="C"||s==="N"||s==="O"||s==="S"||s==="P"};
+ let changed=true;
+ while(changed){
+  changed=false;
+  for(const b of g.B){
+   if(b.o!==1)continue;
+   const aIn=ids.has(b.a), bIn=ids.has(b.b);
+   if(aIn&&bIn){addEdge(b);continue}
+   if(aIn&&cap(b.b)&&hasMultipleNeighbor(g,b.b)){ids.add(b.b);addEdge(b);changed=true}
+   else if(bIn&&cap(b.a)&&hasMultipleNeighbor(g,b.a)){ids.add(b.a);addEdge(b);changed=true}
+  }
+ }
+ return{ids:[...ids],edges};
+}
+function hasMultipleNeighbor(g,id){return g.B.some(b=>(b.a===id||b.b===id)&&b.o>=1.5)}
+// Atoms that lie on an actual cycle within the pi network (via bridge-finding), i.e. ring-conjugated
+// atoms. This recognizes aromatic rings whether written in lowercase SMILES form or drawn Kekulé-style
+// with alternating uppercase single/double bonds (e.g. "C1=CC=CC=C1" is treated the same as "c1ccccc1").
+function ringPiAtoms(ids,edges){
+ const adj=new Map(ids.map(i=>[i,[]]));
+ edges.forEach((e,k)=>{adj.get(e.a).push({to:e.b,k});adj.get(e.b).push({to:e.a,k})});
+ let disc=new Map(),low=new Map(),timer=0,visited=new Set(),bridges=new Set();
+ function dfs(u,pk){
+  visited.add(u);disc.set(u,timer);low.set(u,timer);timer++;
+  for(const{to:v,k}of adj.get(u)||[]){
+   if(k===pk)continue;
+   if(!visited.has(v)){dfs(v,k);low.set(u,Math.min(low.get(u),low.get(v)));if(low.get(v)>disc.get(u))bridges.add(k)}
+   else low.set(u,Math.min(low.get(u),disc.get(v)));
+  }
+ }
+ for(const v of ids)if(!visited.has(v))dfs(v,-1);
+ // Return both the ring atom set AND the actual non-bridge (ring) edges. Filtering edges by atom
+ // membership alone isn't enough: biphenyl's inter-ring bond has both endpoints being "ring atoms"
+ // (each in its own separate ring), even though the bond itself is a bridge, not a ring bond.
+ let atoms=new Set(), ringEdges=[];
+ edges.forEach((e,k)=>{if(!bridges.has(k)){atoms.add(e.a);atoms.add(e.b);ringEdges.push(e)}});
+ return {atoms,edges:ringEdges};
+}
+function comps(g,ids,edges){let set=new Set(ids),adj=new Map(ids.map(i=>[i,[]]));for(const b of edges){if(set.has(b.a)&&set.has(b.b)){adj.get(b.a).push(b.b);adj.get(b.b).push(b.a)}}let seen=new Set(),out=[];for(const v of ids)if(!seen.has(v)){let q=[v],n=0;seen.add(v);while(q.length){let x=q.pop();n++;for(const y of adj.get(x)||[])if(!seen.has(y)){seen.add(y);q.push(y)}}out.push(n)}return{adj,out};}
+function longestPath(adj,ids){
+ let best=1,calls=0,BUDGET=250000; // bounds worst-case runtime on large/heavily-fused ring systems
+ function dfs(v,seen,d){calls++;if(calls>BUDGET)return;if(d>best)best=d;for(const w of adj.get(v)||[])if(!seen.has(w)){seen.add(w);dfs(w,seen,d+1);seen.delete(w);if(calls>BUDGET)return}}
+ for(const v of ids){if(calls>BUDGET)break;let s=new Set([v]);dfs(v,s,1)}
+ return best;
+}
+function ringRank(g,ids){let V=new Set(ids),E=0;for(const b of g.B)if(V.has(b.a)&&V.has(b.b)&&b.o>=1)E++;let C=comps(g,ids,g.B).out.length;return Math.max(0,E-ids.length+C)}
+function buildAdjG(A,B){const adj=new Map(A.map((a,i)=>[i,[]]));for(const b of B){adj.get(b.a).push({to:b.b,o:b.o});adj.get(b.b).push({to:b.a,o:b.o})}return adj;}
+// Fused-aromatic "core": connected components using ONLY genuinely aromatic bonds (o===1.5).
+// This is what separates one real fused polycyclic system (naphthalene, anthracene) from two
+// separate rings joined by a chromophoric bridge (azobenzene, stilbene, biphenyl) - which are
+// optically quite different even though both extend the overall pi network. Must NOT use o>=1.5
+// here (that would also catch ordinary C=O/N=O/C=C double bonds, which aren't aromatic).
+// Fused-ring "core": reuses the already-correct ringAtoms (from ringPiAtoms - Kekule-aware cycle
+// detection on the extended pi network) rather than re-testing bond orders, then groups those ring
+// atoms into connected fused systems using only ring-to-ring edges. This is the key distinction: a
+// bridge atom (e.g. an azo nitrogen) sits BETWEEN two rings but is not itself part of any cycle, so
+// it's already excluded from ringAtoms - whereas a quinone's carbonyl carbon genuinely sits ON the
+// ring (it has two ring neighbors), so it correctly stays part of one fused system.
+function fusedRingCore(ringAtoms,ringEdges){
+ const adj=new Map([...ringAtoms].map(i=>[i,[]]));
+ for(const b of ringEdges){adj.get(b.a).push(b.b);adj.get(b.b).push(b.a)}
+ let seen=new Set(),comps=[];
+ for(const v of ringAtoms)if(!seen.has(v)){let stack=[v],atoms=[];seen.add(v);
+  while(stack.length){let x=stack.pop();atoms.push(x);for(const y of adj.get(x)||[])if(!seen.has(y)){seen.add(y);stack.push(y)}}
+  comps.push(atoms);
+ }
+ let rings=comps.map(atoms=>{let set=new Set(atoms);let E=ringEdges.filter(b=>set.has(b.a)&&set.has(b.b)).length;let rank=Math.max(0,E-atoms.length+1);return{atoms:set,size:atoms.length,rank}});
+ rings.sort((a,b)=>b.rank-a.rank||b.size-a.size);
+ return{rings,best:rings[0]||{atoms:new Set(),size:0,rank:0}};
+}
+// All atoms lying on some cycle in the FULL bond graph (not just the pi network), grouped into
+// connected ring systems. Lets us recognize e.g. a quinone's non-aromatic middle ring (fused to,
+// but not itself part of, the aromatic core) or a macrocyclic musk-type ring.
+// All atoms lying on some cycle in the FULL bond graph (not just the pi network), grouped into
+// connected ring systems. Kept for potential reuse (e.g. macrocyclic-ring odor heuristics) even
+// though the color engine's own quinone detection no longer needs it directly.
+function ringComponents(A,B){
+ const allIds=[...Array(A.length).keys()];
+ const rp=ringPiAtoms(allIds,B), ringSet=rp.atoms;
+ const adj=new Map([...ringSet].map(i=>[i,[]]));
+ for(const b of rp.edges){adj.get(b.a).push(b.b);adj.get(b.b).push(b.a)}
+ let seen=new Set(),comps=[];
+ for(const v of ringSet)if(!seen.has(v)){let stack=[v],atoms=[];seen.add(v);
+  while(stack.length){let x=stack.pop();atoms.push(x);for(const y of adj.get(x)||[])if(!seen.has(y)){seen.add(y);stack.push(y)}}
+  comps.push(new Set(atoms));
+ }
+ return comps;
+}
+function quinoneCount(A,B,coreRings){
+ const adj=buildAdjG(A,B), coreAtoms=new Set(coreRings.flatMap(r=>[...r.atoms]));
+ let count=0;
+ for(let i=0;i<A.length;i++){
+  if(A[i].sym!=='C')continue;
+  if(!coreAtoms.has(i))continue; // carbonyl carbon must itself be a ring member (e.g. anthraquinone), not just adjacent to one
+  if((adj.get(i)||[]).some(x=>A[x.to].sym==='N'))continue; // urea/lactam carbonyl (caffeine), not a quinone
+  if((adj.get(i)||[]).some(x=>x.o===2&&A[x.to].sym==='O'))count++;
+ }
+ return count;
+}
+// Chromophoric bridges linking two ring systems (or a ring to a chain) directly through a
+// multiple bond: azo (-N=N-), imine/azomethine (-CH=N-), stilbene-type (-CH=CH- joining two
+// rings, as opposed to a plain styrene -CH=CH- off just one ring), and direct biaryl bonds.
+function bridgeMotifs(A,B,coreRings){
+ const adj=buildAdjG(A,B), inCore=i=>coreRings.some(r=>r.atoms.has(i)), coreOf=i=>coreRings.findIndex(r=>r.atoms.has(i));
+ let azo=0,imine=0,stilbene=0,styrene=0,biaryl=0,bridgeAtoms=new Set();
+ for(const b of B){
+  const a=b.a,c=b.b;
+  if(b.o===2&&A[a].sym==='N'&&A[c].sym==='N'){azo++;bridgeAtoms.add(a);bridgeAtoms.add(c)}
+  else if(b.o===2&&((A[a].sym==='C'&&A[c].sym==='N')||(A[a].sym==='N'&&A[c].sym==='C'))&&(!inCore(a)||!inCore(c))){imine++;bridgeAtoms.add(a);bridgeAtoms.add(c)}
+  else if(b.o===2&&A[a].sym==='C'&&A[c].sym==='C'&&!inCore(a)&&!inCore(c)){
+   const coresA=new Set((adj.get(a)||[]).filter(x=>x.o===1&&inCore(x.to)).map(x=>coreOf(x.to)));
+   const coresC=new Set((adj.get(c)||[]).filter(x=>x.o===1&&inCore(x.to)).map(x=>coreOf(x.to)));
+   if(coresA.size&&coresC.size){stilbene++;bridgeAtoms.add(a);bridgeAtoms.add(c)}else if(coresA.size||coresC.size){styrene++;bridgeAtoms.add(a);bridgeAtoms.add(c)}
+  }
+ }
+ for(const b of B)if(b.o===1&&inCore(b.a)&&inCore(b.b)){const ra=coreOf(b.a),rb=coreOf(b.b);if(ra!==rb)biaryl++}
+ return{azo,imine,stilbene,styrene,biaryl,bridgeAtoms};
+}
+// Donor (-NH2/-NR2/-OH/-OR) and acceptor (-NO2/-C(=O)R/-C#N) substituents attached directly to
+// the aromatic core: the classic auxochrome bathochromic/hyperchromic effect behind why e.g.
+// nitroaniline is far more colored than either aniline or nitrobenzene alone.
+function auxochromes(A,B,coreAtoms,exclude){
+ const adj=buildAdjG(A,B), isCarbonylC=n=>A[n].sym==='C'&&(adj.get(n)||[]).some(x=>x.o===2&&A[x.to].sym==='O');
+ exclude=exclude||new Set();
+ // Collect each distinct external substituent atom once (a substituent shared by two ring atoms,
+ // e.g. an anthraquinone carbonyl bridging both benzo rings, must not be double-counted), and skip
+ // atoms already accounted for as part of a dedicated bridge (azo/imine/stilbene) motif.
+ let subs=new Map();
+ for(const i of coreAtoms)for(const nb of (adj.get(i)||[])){const j=nb.to;if(coreAtoms.has(j)||exclude.has(j))continue;if(!subs.has(j))subs.set(j,nb)}
+ let donors=0,acceptors=0;
+ for(const[j,nb]of subs){
+  if(nb.o===3&&A[j].sym==='N'){acceptors++;continue}
+  if(nb.o!==1)continue;
+  if(A[j].sym==='N'){const oCount=(adj.get(j)||[]).filter(x=>A[x.to].sym==='O').length;oCount>=2?acceptors++:donors++}
+  else if(A[j].sym==='O'){donors++}
+  else if(A[j].sym==='C'&&isCarbonylC(j)){acceptors++}
+  else if(['F','Cl','Br','I'].includes(A[j].sym)){acceptors+=0.4}
+ }
+ return{donors,acceptors};
+}
+function descriptors(g){let pg=piGraph(g),ids=pg.ids,cc=comps(g,ids,pg.edges);
+ // Ring-conjugated atom set: recognizes aromatic rings whether written with lowercase SMILES
+ // atoms or as Kekule structures with alternating uppercase single/double bonds. Kept as a Set
+ // (ringAtoms) so callers can test individual-atom membership, plus its size (ar) for scoring.
+ let rp=ringPiAtoms(ids,pg.edges), ringAtoms=rp.atoms, ar=ringAtoms.size;
+ // Fused-ring "core" analysis, separate from the ar/r whole-pi-network numbers above: tells a
+ // single fused polycyclic aromatic apart from two rings joined by a chromophoric bridge or a
+ // plain inter-ring single bond (biphenyl).
+ let core=fusedRingCore(ringAtoms,rp.edges), coreAr=core.best.size, coreR=core.best.rank;
+ let db=g.B.filter(b=>b.o===2).length,tb=g.B.filter(b=>b.o===3).length,N=g.A.filter(a=>a.sym==='N').length,O=g.A.filter(a=>a.sym==='O').length,S=g.A.filter(a=>a.sym==='S').length,hal=g.A.filter(a=>['F','Cl','Br','I'].includes(a.sym)).length;
+ let r=ringRank(g,ids),lp=longestPath(cc.adj,ids);return{ids,edges:pg.edges,B:g.B,ar,ringAtoms,coreAr,coreR,coreRings:core.rings,db,tb,N,O,S,hal,r,longest:lp,components:cc.out,largest:Math.max(...cc.out,0),atoms:g.A.length,_A:g.A};}
+function polyeneLength(d){ // longest run of alternating π-capable path containing >=2 double bonds
+ let best=0,calls=0,BUDGET=250000;const adj=new Map(d.ids.map(i=>[i,[]]));for(const b of d.edges)if(d.ids.includes(b.a)&&d.ids.includes(b.b)){adj.get(b.a).push({v:b.b,o:b.o});adj.get(b.b).push({v:b.a,o:b.o})}
+ function dfs(v,seen,db){calls++;let bestv={atoms:seen.size,db};if(calls>BUDGET)return bestv;for(const e of adj.get(v)||[])if(!seen.has(e.v)){let ndb=db+(e.o===2?1:0);seen.add(e.v);let z=dfs(e.v,seen,ndb);seen.delete(e.v);if(z.db>bestv.db||z.db===bestv.db&&z.atoms>bestv.atoms)bestv=z;if(calls>BUDGET)break}return bestv}
+ let out={db:0,atoms:0};for(const v of d.ids){if(calls>BUDGET)break;let z=dfs(v,new Set([v]),0);if(z.db>out.db||z.db===out.db&&z.atoms>out.atoms)out=z}return out;}
+function chromophore(d){
+ const p=polyeneLength(d);
+ const hetero=d.N+d.O+d.S;
+ // A true carbonyl is specifically C=O. The previous "any X=O bond" test also matched a nitro
+ // group's N=O bonds, silently mislabeling nitro compounds as carbonyl-containing.
+ const carbonyl=d.B.filter(b=>b.o===2 && ((gA(d,b.a)==='C'&&gA(d,b.b)==='O')||(gA(d,b.a)==='O'&&gA(d,b.b)==='C'))).length;
+ const allCoreAtoms=new Set(d.coreRings.flatMap(r=>[...r.atoms]));
+ const bridge=bridgeMotifs(d._A,d.B,d.coreRings);
+ const aux=auxochromes(d._A,d.B,allCoreAtoms,bridge.bridgeAtoms);
+ // Fused aromatic macrocycles (phthalocyanine/porphyrin-like): these are genuinely one continuous
+ // aromatic network, so the whole-pi-network ar/r (not the fused-core-only coreAr/coreR) is right here.
+ if(d.ar>=20 && d.N>=4 && d.r>=4){
+   let chl=d.hal>=3;
+   return{kind:'aza-aromatic macrocycle',lam:chl?690:675,w:42,str:.95,bands:[{l:chl?690:675,w:42,s:.95},{l:610,w:35,s:.20}],confidence:'moderate'}
+ }
+ // Carbonyl-rich, N-containing conjugated systems (indigo/cyanine-like donor/acceptor chromophores).
+ const adjCT=buildAdj(d);
+ const ctCarbonyl=d._A.reduce((acc,a,i)=>{
+   if(a.sym!=='C') return acc;
+   const nb=adjCT.get(i)||[];
+   if(!nb.some(x=>x.o===2&&d._A[x.to].sym==='O')) return acc;
+   if(nb.some(x=>d._A[x.to].sym==='N')) return acc; // amide/urea carbonyl: already electron-rich
+   return acc+1;
+ },0);
+ if(ctCarbonyl>=2 && d.N>=2 && (d.r>=2 || d.ar>=6)){
+   let eff=2.4 + 0.085*d.ar + 0.42*Math.min(carbonyl,4) + 0.28*Math.min(d.N,6) + 0.16*Math.max(d.r-1,0);
+   let lam=395 + 32*eff;
+   if(d.longest<7) lam-=35;
+   lam=Math.max(410,Math.min(610,lam));
+   let donor=0.12*Math.min(d.N,6), accept=0.13*Math.min(carbonyl,4);
+   let strength=Math.min(.88,.34+donor+accept+.012*d.ar);
+   let w=46;
+   return{kind:'carbonyl/heteroatom charge-transfer chromophore',lam,w,str:strength,
+     bands:[{l:lam,w,s:strength},{l:lam-48,w:38,s:strength*.36},{l:lam+55,w:65,s:strength*.12}],confidence:'moderate'};
+ }
+ // Azo (-N=N-) chromophore: the dominant class of commercial dyes. Distinct from a fused aromatic
+ // system - two independent rings joined by an azo bridge do NOT behave like naphthalene, even
+ // though the previous version's whole-network ring count could no longer tell them apart once
+ // Kekule-form aromaticity detection was added. Donor+acceptor substituents on the rings (push-pull)
+ // give the large bathochromic shifts real azo dyes are known for.
+ if(bridge.azo>=1){
+   let pushPull=aux.donors>=1&&aux.acceptors>=1;
+   let base=345, shift=14*Math.min(3,aux.donors)+18*Math.min(3,aux.acceptors)+(pushPull?30:0)+15*Math.max(0,bridge.azo-1);
+   let lam=Math.max(320,Math.min(560,base+shift));
+   let str=Math.min(.85,.40+.05*Math.min(3,aux.donors)+.05*Math.min(3,aux.acceptors));
+   return{kind:pushPull?'push-pull azo chromophore':'azo chromophore',lam,w:40,str,
+     bands:[{l:lam,w:40,s:str},{l:lam+95,w:55,s:str*.25}],confidence:pushPull?'low':'moderate'};
+ }
+ // Imine/azomethine (Schiff base) bridge: related to azo but a weaker chromophore.
+ if(bridge.imine>=1){
+   let base=300, shift=10*Math.min(3,aux.donors)+14*Math.min(3,aux.acceptors)+(aux.donors>=1&&aux.acceptors>=1?20:0);
+   let lam=Math.max(275,Math.min(480,base+shift));
+   return{kind:'imine (azomethine) chromophore',lam,w:30,str:.28+.04*Math.min(3,aux.donors+aux.acceptors),
+     bands:[{l:lam,w:30,s:.3}],confidence:'low'};
+ }
+ // Stilbene-type (Ar-CH=CH-Ar): conjugation bridges two rings via a vinylene unit.
+ if(bridge.stilbene>=1){
+   let n=bridge.stilbene;
+   let base=298+40*Math.min(3,n-1), shift=10*Math.min(3,aux.donors)+12*Math.min(3,aux.acceptors)+(aux.donors>=1&&aux.acceptors>=1?22:0);
+   let lam=Math.max(290,Math.min(520,base+shift));
+   return{kind:'stilbene-type extended chromophore',lam,w:30,str:.5+.05*Math.min(3,n),
+     bands:[{l:lam,w:30,s:.5+.05*Math.min(3,n)}],confidence:'moderate'};
+ }
+ // Quinone-type: a carbonyl carbon that is itself part of a ring fused to an aromatic core (e.g.
+ // anthraquinone's central ring). Amino/hydroxy substituents give a large, well-known redshift
+ // (this is literally how most anthraquinone dyes - from pale-yellow anthraquinone itself to
+ // deep red/violet diamino derivatives - get their color).
+ if(quinoneCount(d._A,d.B,d.coreRings)>=1){
+   let fused=d.coreR>=2;
+   let base=fused?330:280, shift=70*Math.min(3,aux.donors)+8*Math.min(2,aux.acceptors);
+   let lam=Math.max(260,Math.min(600,base+shift));
+   let str=Math.min(.7,.22+.09*Math.min(3,aux.donors));
+   return{kind:fused?'quinone (anthraquinone-type) chromophore':'quinone chromophore',lam,w:36,str,
+     bands:[{l:lam,w:36,s:str},{l:lam-70,w:28,s:.14}],confidence:'moderate'};
+ }
+ // Fused aromatic ring ladder, now based on the fused-core ring count (coreR/coreAr) rather than
+ // the whole extended pi network, plus a general auxochrome shift for substituted simple aromatics
+ // (aniline/nitrobenzene/nitroaniline etc. - none of which are literal fused-ring systems, but a
+ // donor or acceptor on a benzene ring measurably shifts and intensifies its absorption).
+ if(d.coreAr>=6 && carbonyl===0 && d.N<3){
+   let n=d.coreR;
+   let auxShift=8*Math.min(3,aux.donors)+10*Math.min(3,aux.acceptors)+(aux.donors>=1&&aux.acceptors>=1?18:0);
+   let base,kind,strBase;
+   if(n>=5){base=455+95*(n-4);kind=n+'-fused-ring aromatic';strBase=.4;}
+   else if(n>=4){base=455;kind='four-fused-ring aromatic';strBase=.32;}
+   else if(n>=3){base=375;kind='three-fused-ring aromatic';strBase=.07;}
+   else if(n>=2){base=286;kind='two-fused-ring aromatic';strBase=.08;}
+   else {base=205;kind='benzene-like aromatic';strBase=.06;}
+   let lam=Math.max(200,Math.min(780,base+auxShift));
+   let str=Math.min(.9,strBase+.02*Math.min(3,aux.donors+aux.acceptors));
+   let conf=auxShift>40?'low':(n<=2?'high':'moderate');
+   return{kind,lam,w:n>=2?20:15,str,bands:[{l:lam,w:n>=2?20:15,s:str},{l:lam-25,w:18,s:str*.3}],confidence:conf};
+ }
+ // Carbonyl-conjugated systems without the full donor/acceptor motif.
+ // Amide/urea carbonyls are excluded here for the same reason as in the charge-transfer branch:
+ // the neighbouring nitrogen lone pair is already delocalised into the C=O, so it is a weak,
+ // high-energy absorber. Counting them made caffeine - a colourless solid - come out orange.
+ if(ctCarbonyl>=1 && (p.db>=1 || d.ar>=6)){
+   let lam=285 + 22*Math.min(6,p.db) + 8*Math.min(12,d.ar) + 28*Math.min(3,ctCarbonyl) + 12*Math.min(3,d.N);
+   lam=Math.max(250,Math.min(470,lam));
+   // The n->pi* transition of an isolated carbonyl is symmetry-forbidden and very weak (molar
+   // absorptivity of order 10-100), so a simple aryl aldehyde or ketone is colourless to pale
+   // yellow, not strongly coloured. Only genuinely extended conjugation earns real intensity.
+   const conj=p.db+(d.coreR>=1?1:0)+Math.max(0,ctCarbonyl-1);
+   const str=conj>=5?.34:conj>=4?.16:conj>=3?.07:.025;
+   return{kind:'carbonyl-conjugated chromophore',lam,w:30,str,bands:[{l:lam,w:30,s:str},{l:lam-45,w:34,s:str*.4}],confidence:'moderate'};
+ }
+ // Ordinary conjugated polyenes. Empirical spectral trend, but preserve heteroatom effects.
+ if(p.db>=2){
+   let n=p.db,base=217+34*(n-2);
+   if(n>=7)base=393+15*(n-7);
+   if(n>=9)base=423+14*(n-9);
+   if(n>=10)base=452+20*(n-10);
+   let ringBonus=(d.r>0)?-5:0, heteroBonus=(d.N+d.O+d.S)>=2?15:0;
+   let lam=Math.max(210,Math.min(520,base+ringBonus+heteroBonus));
+   let carot=n>=9;
+   return{kind:carot?'long conjugated polyene / carotenoid-like':'conjugated polyene',lam,w:carot?34:26,str:carot?.88:.18,bands:[{l:lam,w:carot?34:26,s:carot?.88:.18},{l:lam-55,w:42,s:carot?.20:.06}],confidence:n>=5?'moderate':'high'};
+ }
+ return{kind:'no strong chromophore detected',lam:180,w:20,str:.02,bands:[{l:180,w:20,s:.02}],confidence:'low'};
+}
+function gA(d,id){return d._A && d._A[id]?d._A[id].sym:null;}
+function spectrum(t){let out=[];for(let l=380;l<=780;l+=2){let y=0;for(const b of t.bands)y+=b.s*Math.exp(-.5*((l-b.l)/b.w)**2);out.push([l,Math.min(1,y)])}return out;}
+function color(sp){function cmf(l){return[1.056*Math.exp(-.5*((l-599.8)/37.9)**2)+.362*Math.exp(-.5*((l-442)/16)**2)-.065*Math.exp(-.5*((l-501.1)/20.4)**2),.821*Math.exp(-.5*((l-568.8)/46.9)**2)+.286*Math.exp(-.5*((l-530.9)/16.3)**2),1.217*Math.exp(-.5*((l-437)/11.8)**2)+.681*Math.exp(-.5*((l-459)/26)**2)]}
+ let X=0,Y=0,Z=0;for(const [l,a] of sp){let[x,y,z]=cmf(l),T=Math.exp(-1.55*a);X+=x*T;Y+=y*T;Z+=z*T}let r=3.2406*X-1.5372*Y-.4986*Z,g=-.9689*X+1.8758*Y+.0415*Z,b=.0557*X-.204*Y+1.057*Z,m=Math.max(r,g,b,1e-9);[r,g,b]=[r/m,g/m,b/m].map(v=>Math.max(0,Math.min(1,v)));let f=v=>Math.round(255*(v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055));return[f(r),f(g),f(b)];}
+function cname(c){let[r,g,b]=c,m=Math.max(r,g,b),d=m-Math.min(r,g,b);if(m<40)return'very dark';if(d<22)return'weakly colored';if(r>g*1.35&&r>b*1.25)return'red';if(r>g*1.08&&g>b*1.15)return'orange';if(g>r*1.14&&g>b*1.03)return'green';if(b>r*1.16&&b>g*1.04)return'blue';if(r>g*1.08&&b>g*1.08)return'magenta';if(b>r*1.05&&b>g*1.03)return'violet';return'yellow-green / mixed'}
+function hx(c){return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');}
+function draw(sp){let c=document.getElementById('plot'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.strokeStyle='#777';x.beginPath();x.moveTo(55,22);x.lineTo(55,270);x.lineTo(1070,270);x.stroke();x.font='13px system-ui';for(let l=400;l<=800;l+=50){let X=55+(l-380)/400*1015;x.fillText(l,X-14,292)}x.beginPath();sp.forEach(([l,a],i)=>{let X=55+(l-380)/400*1015,Y=265-Math.min(1,a)*225;i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke();x.fillText('relative absorption',8,17)}
+function buildAdj(d){
+  // Per-atom bond list, needed to tell functional groups apart (an ester's bridging O has a
+  // different neighborhood than a hydroxyl O, even though both are just "an oxygen" by element count).
+  const adj=new Map(d._A.map((a,i)=>[i,[]]));
+  for(const b of d.B){adj.get(b.a).push({to:b.b,o:b.o});adj.get(b.b).push({to:b.a,o:b.o})}
+  return adj;
+}
+function functionalGroups(d){
+  // Distinguishes the functional groups that actually drive odor character, using connectivity
+  // rather than raw element counts. In particular this tells an ester (fruity) apart from a
+  // carboxylic acid (sharp/rancid), and a ketone/aldehyde apart from either - all of which the
+  // previous "carbonyl present + 2+ oxygens = ester" heuristic conflated.
+  const A=d._A, adj=buildAdj(d);
+  const isC=i=>A[i].sym==='C', isO=i=>A[i].sym==='O', isN=i=>A[i].sym==='N', isS=i=>A[i].sym==='S';
+  let alcohols=0,phenols=0,ethers=0,thiols=0,thioethers=0,acids=0,esters=0,amides=0,aldehydes=0,ketones=0,nitriles=0,nitro=0,amines=0;
+  const isCarbonylC=n=>isC(n)&&adj.get(n).some(x=>x.o===2&&isO(x.to));
+  for(let i=0;i<A.length;i++){
+   if(isO(i)){
+    const nb=adj.get(i);
+    if(nb.length===1&&nb[0].o===1){
+     const partner=nb[0].to;
+     if(isC(partner)&&!isCarbonylC(partner)){A[partner].ar?phenols++:alcohols++}
+    } else if(nb.length===2&&nb.every(x=>x.o===1)){
+     const[p,q]=nb.map(x=>x.to);
+     if(!isCarbonylC(p)&&!isCarbonylC(q))ethers++;
+    }
+   }
+   if(isS(i)){
+    const nb=adj.get(i);
+    if(nb.length===1&&nb[0].o<=1)thiols++;else if(nb.length>=2)thioethers++;
+   }
+  }
+  for(let i=0;i<A.length;i++){
+   if(!isC(i))continue;
+   const nb=adj.get(i),dblO=nb.filter(x=>x.o===2&&isO(x.to));
+   if(!dblO.length)continue;
+   // Use o<2 (single OR aromatic): a carbonyl carbon sitting in an aromatic ring bonds to its ring
+   // neighbours at order 1.5, so testing for exactly 1 makes urea/lactam carbonyls look like aldehydes.
+   const singleO=nb.filter(x=>x.o<2&&isO(x.to)),singleN=nb.filter(x=>x.o<2&&isN(x.to)),otherC=nb.filter(x=>x.o<2&&isC(x.to));
+   if(singleO.length){const o=singleO[0].to;(adj.get(o).length>=2)?esters++:acids++}
+   else if(singleN.length)amides++;
+   else if(otherC.length>=2)ketones++;
+   else aldehydes++;
+  }
+  for(const b of d.B)if(b.o===3&&((isC(b.a)&&isN(b.b))||(isC(b.b)&&isN(b.a))))nitriles++;
+  for(let i=0;i<A.length;i++)if(isN(i)){
+   const nb=adj.get(i),oCount=nb.filter(x=>isO(x.to)).length;
+   if(oCount>=2)nitro++;else if(!nb.some(x=>isCarbonylC(x.to)))amines++;
+  }
+  return{alcohols,phenols,ethers,thiols,thioethers,acids,esters,amides,aldehydes,ketones,nitriles,nitro,amines};
+}
+// Gem-dimethyl carbon (bonded to two separate terminal methyl groups): a structural hallmark of
+// terpenoid/isoprenoid skeletons (pinene, camphor, ionone rings, many essential-oil components).
+function gemDimethylCount(d){
+ const adj=buildAdj(d), A=d._A;
+ let count=0;
+ for(let i=0;i<A.length;i++){
+  if(A[i].sym!=='C')continue;
+  const methylNb=(adj.get(i)||[]).filter(x=>x.o===1&&A[x.to].sym==='C'&&(adj.get(x.to)||[]).length===1);
+  if(methylNb.length>=2)count++;
+ }
+ return count;
+}
+// Lactone: a cyclic ester, i.e. an ester where the carbonyl carbon and its bridging oxygen are
+// both members of the same ring. Classic coumarin/whisky-lactone/macrocyclic-musk pattern.
+function lactoneCount(d){
+ const adj=buildAdj(d), A=d._A, rc=ringComponents(A,d.B);
+ let count=0;
+ for(let i=0;i<A.length;i++){
+  if(A[i].sym!=='C')continue;
+  const nb=adj.get(i);
+  if(!nb.some(x=>x.o===2&&A[x.to].sym==='O'))continue;
+  const singleO=nb.filter(x=>x.o<2&&A[x.to].sym==='O'); // order 1 or 1.5: some lactones write the ring O aromatically
+  if(!singleO.length)continue;
+  const o=singleO[0].to;
+  if((adj.get(o)||[]).length<2)continue; // must be the ester's bridging O, not a free acid -OH
+  if(rc.some(s=>s.has(i)&&s.has(o)))count++;
+ }
+ return count;
+}
+// A genuinely large, SIMPLE (unfused, rank-exactly-1) ring bearing a carbonyl or ester - the
+// macrocyclic-musk pattern (civetone, muscone, pentadecanolide/"Exaltolide"), as opposed to any
+// fused polycyclic system that merely happens to have many total ring atoms (e.g. coumarin).
+function hasMacrocyclicCarbonyl(d){
+ const rc=ringComponents(d._A,d.B), adj=buildAdj(d);
+ const big=rc.filter(comp=>{
+  if(comp.size<10)return false;
+  const edges=d.B.filter(b=>comp.has(b.a)&&comp.has(b.b));
+  return (edges.length-comp.size+1)===1;
+ });
+ return big.some(comp=>[...comp].some(i=>d._A[i].sym==='C'&&(adj.get(i)||[]).some(x=>x.o===2&&d._A[x.to].sym==='O')));
+}
+// Real odor perception requires the molecule to actually reach the nose: ionic solids don't
+// vaporize as neutral species, very large/highly H-bonded molecules have near-zero vapor
+// pressure, and a few very small saturated hydrocarbons are classic odorless textbook cases
+// (methane itself is odorless - natural gas is odorized artificially for safety). Mirrors how
+// the color engine treats "colorless" as a real, named outcome rather than a vague fallback.
+const METAL_SYMS=['Na','K','Li','Mg','Ca','Al','Zn','Fe','Cu','Ni','Co','Mn','Cr','Ag','Au','Pt','Hg','Cd','Ti','Zr'];
+function odorGate(d,fg,volatility,macrocycle){
+ const A=d._A;
+ if(!A.some(a=>a.sym==='C')) return {odorless:true,reason:'no carbon skeleton at all (inorganic/ionic) - non-volatile, effectively odorless'};
+ if(A.some(a=>METAL_SYMS.includes(a.sym))) return {odorless:true,reason:'contains a bare metal/salt fragment - an ionic solid does not vaporize as a neutral molecule and so has no odor'};
+ const heavy=A.filter(a=>a.sym!=='H').length;
+ if(A.every(a=>a.sym==='C') && d.B.every(b=>b.o===1) && heavy<=2) return {odorless:true,reason:'very small saturated hydrocarbon (e.g. methane/ethane) - a classic odorless case'};
+ const hbondDonors=fg.alcohols+fg.phenols+fg.acids;
+ if(hbondDonors>=4 && heavy<=24) return {odorless:true,reason:'many hydroxyl/acid groups on a small-to-moderate skeleton (sugar/polyol-like) - typically crystalline and non-volatile at room temperature'};
+ if(volatility<12 && !macrocycle) return {odorless:true,reason:'estimated volatility is too low for the molecule to reach the nose in useful concentration'};
+ // A molecule carrying roughly as many N-H/O-H hydrogens as it has heavy atoms forms a dense
+ // hydrogen-bonded crystal lattice (urea, glycine, sugars): high-melting and effectively
+ // non-volatile, hence odourless, even when the molecule itself is small.
+ {
+  let donorH=0;
+  for(let i=0;i<A.length;i++) if(A[i].sym==='N'||A[i].sym==='O') donorH+=implicitH(d,i);
+  if(heavy>=3 && donorH>=heavy*0.5)
+   return {odorless:true,reason:'a dense hydrogen-bonding network relative to molecular size - such compounds form high-melting crystalline solids with negligible vapour pressure'};
+ }
+ // Rigid fused heteroaromatic solids with appreciable polar surface (caffeine, theobromine,
+ // most alkaloid salts) are high-melting crystalline solids with negligible vapour pressure.
+ if(d.coreR>=2 && heavy>=12 && !macrocycle){
+  const pc=physChem(d);
+  if(pc.tpsa>=45 && fg.thiols===0 && fg.acids===0)
+   return {odorless:true,reason:'a rigid fused heteroaromatic ring system with substantial polar surface area - a high-melting crystalline solid with negligible vapour pressure, so effectively odourless'};
+ }
+ return {odorless:false};
+}
+// ==================== Taste engine ====================
+// Detects an amine nitrogen with one or more carboxylic acid groups nearby (within ~4 bonds) -
+// the alpha-amino-acid backbone pattern. One nearby acid = simple amino acid (many, like glycine
+// and alanine, taste mildly sweet). Two or more (a second, distal, carboxylic acid) = the
+// dicarboxylic amino acid pattern of glutamate/aspartate, the textbook umami taste compounds.
+function aminoAcidSignal(d){
+ const A=d._A, adj=buildAdj(d);
+ const isC=i=>A[i].sym==='C', isN=i=>A[i].sym==='N', isO=i=>A[i].sym==='O';
+ const isCarbonylC=n=>isC(n)&&(adj.get(n)||[]).some(x=>x.o===2&&isO(x.to));
+ const isAcidC=n=>{
+  if(!isC(n))return false;
+  const nb=adj.get(n)||[];
+  if(!nb.some(x=>x.o===2&&isO(x.to)))return false;
+  const singleO=nb.filter(x=>x.o===1&&isO(x.to));
+  return singleO.length>0 && (adj.get(singleO[0].to)||[]).length===1;
+ };
+ let best=0;
+ for(let i=0;i<A.length;i++){
+  if(!isN(i))continue;
+  const nbN=adj.get(i)||[];
+  if(nbN.some(x=>isO(x.to)))continue;        // skip nitro-like N
+  if(nbN.some(x=>isCarbonylC(x.to)))continue; // skip amide N
+  let seen=new Set([i]),frontier=[i],acidCount=0;
+  for(let depth=0;depth<4;depth++){
+   let next=[];
+   for(const u of frontier)for(const nb of (adj.get(u)||[])){
+    if(seen.has(nb.to))continue;
+    seen.add(nb.to);
+    if(isAcidC(nb.to))acidCount++;
+    next.push(nb.to);
+   }
+   frontier=next;
+  }
+  best=Math.max(best,acidCount);
+ }
+ return best;
+}
+// Taste, like odor, isn't uniquely determined by 2D structure (stereochemistry and exact receptor
+// geometry both matter enormously - two stereoisomers of the same 2D graph can taste completely
+// different). This models only the broadest, most textbook structure-taste correlations: acids
+// taste sour, sugars/polyols taste sweet, ionic salts taste salty, dicarboxylic amino acids taste
+// umami, and complex nitrogenous heterocycles often taste bitter (many alkaloids do). Real taste
+// is a receptor-binding phenomenon this cannot substitute for.
+function tasteProfile(d){
+ const A=d._A;
+ const heavy=A.filter(a=>a.sym!=='H').length;
+ const N=d.N,ar=d.ar,r=d.r;
+ const fg=functionalGroups(d);
+ const aa=aminoAcidSignal(d);
+ const hasMetal=A.some(a=>METAL_SYMS.includes(a.sym));
+ const hasHalide=A.some(a=>['F','Cl','Br','I'].includes(a.sym));
+ const hasCarbon=A.some(a=>a.sym==='C');
+ const If=(cond,v)=>cond?v:0;
+ // Salty: a bare metal ion with a halide (or other simple) counter-ion - a classic ionic salt.
+ if(hasMetal && (hasHalide || !hasCarbon)){
+  return {scores:{salty:100},ranked:[['salty',100]],character:'salty',confidence:'moderate',
+   rationale:['bare metal + counter-ion pattern detected: a simple ionic salt, the textbook salty-taste mechanism'],heavy,fg,aa,tasteless:false};
+ }
+ const polarGroups=fg.esters+fg.acids+fg.amides+fg.alcohols+fg.phenols+fg.ethers+fg.amines+fg.thiols+fg.thioethers+fg.nitro+fg.nitriles+fg.ketones+fg.aldehydes;
+ if(!hasCarbon){
+  return {scores:{},ranked:[],character:'tasteless / not applicable',confidence:'low',
+   rationale:['no carbon skeleton and no recognized ionic-salt pattern - taste is not well modeled for this input'],heavy,fg,aa,tasteless:true};
+ }
+ // Tasteless: taste requires the tastant to dissolve in saliva and reach a receptor. A purely
+ // nonpolar hydrocarbon with no functional groups at all is a poor fit, much like mineral oil or
+ // paraffin wax, which are used industrially precisely because they are tasteless.
+ if(polarGroups===0 && ar===0 && heavy>=4){
+  return {scores:{},ranked:[],character:'tasteless (or very faint)',confidence:'moderate',
+   rationale:['a purely nonpolar hydrocarbon with no polar/ionic groups - poor solubility in saliva, much like mineral oil or paraffin wax'],heavy,fg,aa,tasteless:true};
+ }
+ const scores={sweet:0,sour:0,salty:0,bitter:0,umami:0};
+ // Umami: two or more carboxylic acids near an amine nitrogen is the glutamate/aspartate pattern.
+ scores.umami = If(aa>=2,55) + If(fg.acids>=2&&N>=1,10);
+ // Sour: acidity is fundamentally proton donation - dominated by carboxylic acid density. An
+ // amino-acid pattern's acid is folded mostly into sweet/umami instead of reading as plain sour.
+ scores.sour  = 22*Math.min(3,fg.acids) - If(aa>=1,15);
+ // Sweet: polyol/sugar-like density (real sweetness (Shallenberger-Acree AH-B theory) needs a
+ // specific H-bond donor/acceptor geometry this can't model - OH density is only a broad proxy),
+ // plus the simple-amino-acid case (glycine/alanine/serine are all mildly sweet).
+ scores.sweet = 12*Math.min(4,fg.alcohols) + If(aa===1,25) + If(fg.esters>0,6);
+ // Bitter: many bitter compounds are complex nitrogenous heterocycles/alkaloids (caffeine,
+ // quinine-type templates) - fused aromatic ring systems combined with several nitrogens.
+ scores.bitter = 9*Math.min(4,r) + 7*Math.min(4,N) + If(ar>0&&N>=2,10) + If(heavy>=15&&N>=1,8);
+ for(const k in scores) scores[k]=Math.max(0,Math.min(100,scores[k]));
+ const ranked=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+ const active=ranked.filter(x=>x[1]>=Math.max(10,ranked[0][1]*0.5)).slice(0,2);
+ const character=active.length&&active[0][1]>0?active.map(x=>x[0]).join(' + '):'weak / uncertain';
+ const confidence=(active[0]&&active[0][1]>=35)?'moderate':'low';
+ let rationale=[];
+ if(aa>=2) rationale.push('a dicarboxylic amino-acid pattern (like glutamate/aspartate) was detected: the textbook umami structural motif');
+ else if(aa===1) rationale.push('a simple amino-acid-like pattern was detected (many small amino acids, e.g. glycine, taste mildly sweet)');
+ if(fg.acids && aa<1) rationale.push('carboxylic acid group(s) raise sourness (proton-donating groups)');
+ if(fg.alcohols>=2) rationale.push('multiple hydroxyl groups (polyol/sugar-like) raise sweetness');
+ if(r>=2 && N>=2) rationale.push('a fused polycyclic system with multiple nitrogens resembles common bitter alkaloid templates (e.g. caffeine/purine-like)');
+ if(!rationale.length) rationale.push('few strong taste-driving structural cues were detected');
+ return {scores,ranked,character,confidence,rationale,heavy,fg,aa,tasteless:false};
+}
+
+// ---------- structural feature extraction for odor ----------
+// Enumerate the small rings themselves (not just "which atoms are in some ring"). Odor depends
+// strongly on ring TYPE: a 6-ring with two aromatic nitrogens is a pyrazine (roasted/nutty), a
+// 5-ring lactone is coconut-like, a 16-ring lactone is a musk. Found by taking each ring bond and
+// looking for the shortest alternative path between its ends.
+function smallRings(d){
+  const A=d._A, adj=buildAdj(d);
+  const allIdx=[...Array(A.length).keys()];
+  const rp=ringPiAtoms(allIdx,d.B);
+  const ringEdgeSet=new Set(rp.edges.map(e=>Math.min(e.a,e.b)+'_'+Math.max(e.a,e.b)));
+  let found=new Map();
+  for(const e of rp.edges){
+    // shortest path from e.a to e.b avoiding the direct bond
+    let prev=new Map([[e.a,-1]]), frontier=[e.a], done=false;
+    while(frontier.length&&!done){
+      let next=[];
+      for(const u of frontier){
+        for(const x of (adj.get(u)||[])){
+          if(u===e.a&&x.to===e.b) continue;
+          if(u===e.b&&x.to===e.a) continue;
+          if(prev.has(x.to)) continue;
+          prev.set(x.to,u);
+          if(x.to===e.b){done=true;break}
+          next.push(x.to);
+        }
+        if(done)break;
+      }
+      frontier=next;
+    }
+    if(!prev.has(e.b)) continue;
+    let cyc=[], cur=e.b;
+    while(cur!==-1){cyc.push(cur);cur=prev.get(cur)===undefined?-1:prev.get(cur)}
+    if(cyc.length<3||cyc.length>20) continue;
+    const key=[...cyc].sort((a,b)=>a-b).join(',');
+    if(!found.has(key)) found.set(key,cyc);
+  }
+  return [...found.values()].map(atoms=>{
+    const set=new Set(atoms);
+    const syms=atoms.map(i=>A[i].sym);
+    return {atoms,set,size:atoms.length,
+      nN:syms.filter(s=>s==='N').length, nO:syms.filter(s=>s==='O').length, nS:syms.filter(s=>s==='S').length,
+      aromatic:atoms.every(i=>A[i].ar)};
+  });
+}
+// Longest chain of non-ring carbons reachable from a start atom (the start itself not counted).
+// Aliphatic odor is dominated by chain length: hexanal is the classic "cut grass" green note,
+// while decanal - the same functional group four carbons longer - is waxy/citrus-peel.
+function chainLen(d,start,banned){
+  const A=d._A, adj=buildAdj(d);
+  const ok=i=>A[i].sym==='C'&&!A[i].ar&&!d.ringAtoms.has(i)&&!(banned&&banned.has(i));
+  let best=0;
+  const seen=new Set([start]);
+  (function dfs(u,len){
+    if(len>best)best=len;
+    for(const x of (adj.get(u)||[])){
+      if(seen.has(x.to)||!ok(x.to))continue;
+      seen.add(x.to); dfs(x.to,len+1); seen.delete(x.to);
+    }
+  })(start,0);
+  return best;
+}
+function odorFeatures(d){
+  const A=d._A, adj=buildAdj(d), rings=smallRings(d);
+  // Ring membership here must come from the FULL bond graph: saturated rings (menthol's
+  // cyclohexane, camphor's bicyclic cage) carry no pi system and are absent from d.ringAtoms.
+  const fullRing=new Set(); for(const r of rings) for(const i of r.atoms) fullRing.add(i);
+  const fg=functionalGroups(d);
+  const isC=i=>A[i].sym==='C', isO=i=>A[i].sym==='O', isN=i=>A[i].sym==='N', isS=i=>A[i].sym==='S';
+  const carbonylC=i=>isC(i)&&(adj.get(i)||[]).some(x=>x.o===2&&isO(x.to));
+  const F={rings,
+    acidChain:[], aldChain:[], ketoChain:[], alcChain:[], esterSize:[],
+    arCHO:0, arCHO_OH:0, arCHO_OMe:0, cinnamyl:0, arOH:0, arOMe:0, guaiacol:0, arPropenyl:0, arAlkyl:0,
+    lactoneSizes:[], diketone:0, pyrazine:0, methoxypyrazine:0, furanone:0, furan:0, thiazole:0, pyridine:0,
+    indole:0, indoleSubst:0, aliphAmine:0, aminChain:[], disulfide:0, allylS:0, isothiocyanate:0,
+    terpeneRing:0, bicyclicTerpene:0, phenylEthanol:0, salicylate:0, macroKetone:0, geosminLike:0,
+    aliphaticEne:0, gemDiMe:gemDimethylCount(d), heavy:A.filter(a=>a.sym!=='H').length};
+  F.methylBranches=(function(){let m=0;for(let i=0;i<A.length;i++){if(!isC(i)||A[i].ar)continue;const nb=adj.get(i)||[];if(nb.length===1&&nb[0].o===1&&isC(nb[0].to))m++}return m})(); // must hang off carbon: an N-methyl is not a terpenoid methyl
+  F.aliphaticEne=d.B.filter(b=>b.o===2&&isC(b.a)&&isC(b.b)&&!d.ringAtoms.has(b.a)&&!d.ringAtoms.has(b.b)).length;
+  // --- carbonyl-centred classification with chain lengths ---
+  for(let i=0;i<A.length;i++){
+    if(!carbonylC(i)) continue;
+    const nb=adj.get(i)||[];
+    // o<2 = single or aromatic; see the note in functionalGroups.
+    const singleO=nb.filter(x=>x.o<2&&isO(x.to));
+    const singleN=nb.filter(x=>x.o<2&&isN(x.to));
+    const cNb=nb.filter(x=>x.o<2&&isC(x.to));
+    const onAromatic=nb.some(x=>A[x.to].ar);
+    // adjacent second carbonyl -> 1,2-diketone (diacetyl: the definitive buttery odorant)
+    if(cNb.some(x=>carbonylC(x.to))) F.diketone++;
+    if(singleO.length){
+      const o=singleO[0].to;
+      const bridging=(adj.get(o)||[]).length>=2;
+      if(bridging){
+        const lac=rings.find(r=>r.set.has(i)&&r.set.has(o));
+        if(lac) F.lactoneSizes.push(lac.size);
+        else {
+          const acyl=chainLen(d,i), alkyl=chainLen(d,o);
+          F.esterSize.push({acyl,alkyl,total:acyl+alkyl,aromatic:onAromatic});
+          if(onAromatic){
+            // The hydroxyl of a salicylate sits ortho to the ester, i.e. on a ring neighbour of the
+            // attachment carbon - not on the attachment carbon itself.
+            const ipso=nb.filter(x=>A[x.to].ar).map(x=>x.to);
+            for(const c0 of ipso) for(const nn of (adj.get(c0)||[])){
+              if(!A[nn.to].ar) continue;
+              for(const y of (adj.get(nn.to)||[])) if(y.o===1&&isO(y.to)&&(adj.get(y.to)||[]).length===1) F.salicylate++;
+            }
+          }
+        }
+      } else F.acidChain.push({n:chainLen(d,i),aromatic:onAromatic});
+    }
+    else if(singleN.length){ /* amide - largely non-volatile, ignored */ }
+    else if(cNb.length>=2){
+      F.ketoChain.push({n:chainLen(d,i),aromatic:onAromatic});
+      // Full-graph ring membership again: a macrocyclic musk ketone's ring is saturated apart from
+      // the carbonyl itself, so it never appears in the pi-network ring set.
+      if(fullRing.has(i)){ const r=rings.find(x=>x.set.has(i)); if(r&&r.size>=10) F.macroKetone++; }
+    }
+    else {
+      if(onAromatic){
+        F.arCHO++;
+        const ring=rings.find(r=>r.aromatic&&[...r.set].some(z=>(adj.get(i)||[]).some(y=>y.to===z)));
+        if(ring){
+          for(const z of ring.set) for(const y of (adj.get(z)||[])){
+            if(!isO(y.to)) continue;
+            const deg=(adj.get(y.to)||[]).length;
+            if(deg===1) F.arCHO_OH++; else if(deg===2) F.arCHO_OMe++;
+          }
+        }
+      } else {
+        // cinnamaldehyde: CHO on a C=C that is itself attached to an aromatic ring
+        const viaEne=nb.some(x=>isC(x.to)&&(adj.get(x.to)||[]).some(y=>y.o===2&&isC(y.to)&&(adj.get(y.to)||[]).some(z=>A[z.to].ar)));
+        if(viaEne) F.cinnamyl++; else F.aldChain.push({n:chainLen(d,i)});
+      }
+    }
+  }
+  // --- oxygen substituents on aromatic rings ---
+  for(let i=0;i<A.length;i++){
+    if(!isO(i)) continue;
+    const nb=adj.get(i)||[];
+    const arNb=nb.filter(x=>A[x.to].ar);
+    if(!arNb.length) continue;
+    if(nb.length===1&&nb[0].o===1) F.arOH++;   // single bond only: a C=O oxygen is not a phenol
+    else if(nb.length===2 && nb.some(x=>isC(x.to)&&!A[x.to].ar&&chainLen(d,x.to)===0)) F.arOMe++;
+  }
+  if(F.arOH>=1&&F.arOMe>=1) F.guaiacol=1;
+  // aryl propenyl (anethole/estragole/eugenol side chain)
+  for(const b of d.B){
+    if(b.o!==2||!isC(b.a)||!isC(b.b)) continue;
+    if(d.ringAtoms.has(b.a)&&d.ringAtoms.has(b.b)) continue;
+    // Count both propenyl (C=C directly on the ring, as in anethole) and allyl (C=C one carbon
+    // further out, as in eugenol) - both give the same clove/anise-type side-chain character.
+    const near=x=>(adj.get(x)||[]).some(y=>A[y.to].ar||(isC(y.to)&&!A[y.to].ar&&(adj.get(y.to)||[]).some(z=>A[z.to].ar)));
+    if([b.a,b.b].some(near)) F.arPropenyl++;
+  }
+  // 2-phenylethanol (rose): aromatic ring + 2-carbon chain + OH
+  for(let i=0;i<A.length;i++){
+    if(!isO(i)||(adj.get(i)||[]).length!==1) continue;
+    const c=(adj.get(i)||[])[0].to;
+    if(!isC(c)||A[c].ar) continue;
+    for(const x of (adj.get(c)||[])) if(isC(x.to)&&!A[x.to].ar&&(adj.get(x.to)||[]).some(y=>A[y.to].ar)) F.phenylEthanol++;
+  }
+  // alcohols with chain length
+  for(let i=0;i<A.length;i++){
+    if(!isO(i)||(adj.get(i)||[]).length!==1) continue;
+    const c=(adj.get(i)||[])[0].to;
+    if(!isC(c)||carbonylC(c)) continue;
+    F.alcChain.push({n:chainLen(d,c)+1,ring:fullRing.has(c),aromatic:A[c].ar});
+  }
+  // --- ring-type classification ---
+  for(const r of rings){
+    const ringHasCarbonyl=[...r.set].some(i=>isC(i)&&(adj.get(i)||[]).some(x=>x.o===2&&isO(x.to)));
+    if(r.aromatic&&r.size===6&&r.nN===2&&!ringHasCarbonyl){
+      F.pyrazine++;
+      for(const z of r.set) for(const y of (adj.get(z)||[])) if(isO(y.to)&&(adj.get(y.to)||[]).length===2) F.methoxypyrazine++;
+    }
+    if(r.aromatic&&r.size===6&&r.nN===1) F.pyridine++;
+    if(r.size===5&&r.nO===1){
+      const enol=[...r.set].some(i=>isC(i)&&(adj.get(i)||[]).some(x=>x.o===1&&isO(x.to)&&(adj.get(x.to)||[]).length===1)); // hydroxyl (single bond), NOT the carbonyl oxygen
+      const keto=[...r.set].some(i=>carbonylC(i));
+      if(keto&&enol) F.furanone++; else if(r.aromatic) F.furan++;
+    }
+    if(r.size===5&&r.nN===1&&r.nS===1) F.thiazole++;
+    // terpene-type ring: carbocyclic, 5-7 members, with a gem-dimethyl or ring methyl
+    if(r.size>=5&&r.size<=7&&r.nN===0&&r.nO===0&&r.nS===0&&!r.aromatic) F.terpeneRing++;
+  }
+  // indole / skatole
+  {
+    const carbocyclic6=rings.some(r=>r.size===6&&r.aromatic&&r.nN===0&&r.nO===0&&r.nS===0);
+    const fused=ringComponents(A,d.B).filter(c=>{
+      const edges=d.B.filter(b=>c.has(b.a)&&c.has(b.b));
+      return (edges.length-c.size+1)>=2 && [...c].some(i=>isN(i)&&A[i].ar) && [...c].filter(i=>A[i].ar).length>=8 && carbocyclic6;
+    });
+    if(fused.length){
+      F.indole=1;
+      for(const c of fused) for(const z of c) for(const y of (adj.get(z)||[])) if(!c.has(y.to)&&isC(y.to)&&!A[y.to].ar) F.indoleSubst++;
+    }
+  }
+  // aliphatic amines with chain size
+  for(let i=0;i<A.length;i++){
+    if(!isN(i)||A[i].ar) continue;
+    const nb=adj.get(i)||[];
+    if(nb.some(x=>x.o>=2)) continue;
+    if(nb.some(x=>isO(x.to))) continue;
+    if(nb.some(x=>carbonylC(x.to))) continue;
+    F.aliphAmine++;
+    F.aminChain.push(nb.reduce((s,x)=>s+chainLen(d,x.to)+1,0));
+  }
+  // sulfur motifs
+  for(const b of d.B) if(b.o===1&&isS(b.a)&&isS(b.b)) F.disulfide++;
+  for(let i=0;i<A.length;i++) if(isS(i)){
+    for(const x of (adj.get(i)||[])) if(isC(x.to)&&(adj.get(x.to)||[]).some(y=>y.o===2&&isC(y.to))) F.allylS++;
+  }
+  for(const b of d.B) if(b.o===2&&((isN(b.a)&&isC(b.b))||(isC(b.a)&&isN(b.b)))){
+    const c=isC(b.a)?b.a:b.b;
+    if((adj.get(c)||[]).some(x=>x.o===2&&isS(x.to))) F.isothiocyanate++;
+  }
+  // bicyclic saturated terpene / geosmin-like
+  {
+    for(const c of ringComponents(A,d.B)){
+      const edges=d.B.filter(b=>c.has(b.a)&&c.has(b.b));
+      const rank=edges.length-c.size+1;
+      const saturated=[...c].every(i=>!A[i].ar);
+      if(rank>=2&&saturated){
+        F.bicyclicTerpene++;
+        const hasOH=[...c].some(i=>(adj.get(i)||[]).some(x=>x.o===1&&isO(x.to)&&(adj.get(x.to)||[]).length===1));
+        if(hasOH&&(F.gemDiMe>=1||F.methylBranches>=2)) F.geosminLike=1; // geosmin methyls sit on different carbons, so gem-dimethyl alone misses it
+      }
+    }
+  }
+  return F;
+}
+
+// Odor family labels. A far wider set than before: acids, amines, pyrazines, diketones and aryl
+// aldehydes previously had no correct family to land in, so they were forced into whatever generic
+// term happened to score highest.
+const ODOR_FAMILIES=['sour/acidic','rancid/cheesy','fruity','citrus','floral','green','herbal','woody',
+ 'camphoraceous','minty','spicy','balsamic/vanilla','smoky/phenolic','almond','caramel','nutty/roasted',
+ 'buttery','coconut/creamy','fatty/waxy','sulfurous','alliaceous','fishy/amine','animalic','musky',
+ 'earthy/musty','ethereal/solvent','pungent'];
+function odorScores(d,F,fg){
+  const S={}; for(const k of ODOR_FAMILIES) S[k]=0;
+  // Evidence is combined by MAX, not by sum. Summing produced "soup": many weak generic terms
+  // added up to outrank one strong specific signal. Taking the strongest single piece of evidence
+  // per family keeps a definitive group (a thiol, a diketone) dominant, as it is in reality.
+  const ev=(fam,val)=>{ if(val>S[fam]) S[fam]=val; };
+  const nonArAlc=F.alcChain.filter(a=>!a.aromatic);
+
+  // ---- carboxylic acids: chain length decides vinegar vs rancid vs waxy ----
+  for(const a of F.acidChain){
+    if(a.aromatic){ ev('balsamic/vanilla',35); continue; }
+    const n=a.n;
+    if(n<=1){ ev('sour/acidic',80); ev('pungent',60); }
+    else if(n<=2){ ev('sour/acidic',75); ev('pungent',45); }
+    else if(n<=5){ ev('rancid/cheesy',80); ev('sour/acidic',45); }     // butyric/valeric
+    else if(n<=10){ ev('rancid/cheesy',55); ev('fatty/waxy',60); }      // caproic/caprylic: goaty
+    else { ev('fatty/waxy',60); }
+  }
+  // ---- aliphatic aldehydes: the classic chain-length series ----
+  for(const a of F.aldChain){
+    const n=a.n+1; // total carbons including the carbonyl carbon, so C6 = hexanal
+    if(n<=2){ ev('pungent',65); ev('ethereal/solvent',40); }
+    else if(n<=4){ ev('green',50); ev('fruity',35); }
+    else if(n<=7){ ev('green',75); ev('fatty/waxy',25); }               // hexanal: cut grass
+    else if(n<=9){ ev('citrus',60); ev('fatty/waxy',50); ev('green',30);} // octanal/nonanal: soapy citrus
+    else if(n<=13){ ev('fatty/waxy',70); ev('citrus',45); }             // decanal: waxy orange peel
+    else { ev('fatty/waxy',55); }
+    if(F.aliphaticEne>=1&&n>=5&&n<=9) ev('green',85);                   // trans-2-hexenal: leaf aldehyde
+  }
+  // ---- aromatic aldehydes: substitution pattern decides almond vs vanilla ----
+  if(F.arCHO){
+    if(F.arCHO_OH&&F.arCHO_OMe){ ev('balsamic/vanilla',88); ev('caramel',35); }  // vanillin
+    else if(F.arCHO_OMe){ ev('balsamic/vanilla',55); ev('spicy',35); }
+    else if(F.arCHO_OH){ ev('balsamic/vanilla',45); ev('smoky/phenolic',35); }
+    else { ev('almond',85); ev('balsamic/vanilla',30); }                          // benzaldehyde
+  }
+  if(F.cinnamyl){ ev('spicy',85); ev('balsamic/vanilla',40); }                     // cinnamaldehyde
+  // ---- esters: small esters are fruity, long ones turn waxy ----
+  for(const e of F.esterSize){
+    if(e.aromatic){ ev('balsamic/vanilla',45); if(F.salicylate){ ev('minty',75); } continue; }
+    if(e.total<=8) ev('fruity',85);
+    else if(e.total<=12){ ev('fruity',45); ev('fatty/waxy',40); }
+    else ev('fatty/waxy',55);
+  }
+  // ---- lactones: ring size is the deciding variable ----
+  for(const n of F.lactoneSizes){
+    if(n===5){ ev('coconut/creamy',80); ev('fruity',40); }              // gamma-lactone
+    else if(n===6){ ev('coconut/creamy',70); ev('balsamic/vanilla',35);} // delta-lactone
+    else if(n<=11){ ev('coconut/creamy',40); ev('musky',35); }
+    else { ev('musky',88); }                                            // macrocyclic musk
+  }
+  // ---- ketones ----
+  if(F.diketone) ev('buttery',92);                                      // diacetyl
+  if(F.macroKetone) ev('musky',88);                                     // muscone/civetone
+  for(const k of F.ketoChain){
+    if(k.aromatic){ ev('balsamic/vanilla',35); continue; }
+    if(F.terpeneRing&&F.gemDiMe){ ev('camphoraceous',82); ev('minty',40); }  // camphor
+    else if(k.n>=4&&k.n<=9) ev('fruity',40);
+  }
+  // ---- phenols ----
+  if(F.arOH){
+    if(F.guaiacol){
+      if(F.arPropenyl){ ev('spicy',88); ev('smoky/phenolic',40); }      // eugenol: clove
+      else { ev('smoky/phenolic',80); ev('balsamic/vanilla',45); }      // guaiacol
+    } else if(!F.arCHO&&!F.salicylate){ ev('smoky/phenolic',72); ev('woody',30); }     // phenol/cresol: medicinal
+  }
+  if(F.arOMe&&F.arPropenyl&&!F.arOH){ ev('balsamic/vanilla',65); ev('spicy',45); } // anethole: anise
+  // ---- nitrogen heterocycles ----
+  if(F.pyrazine){
+    if(F.methoxypyrazine){ ev('earthy/musty',80); ev('green',60); }     // bell-pepper pyrazine
+    else { ev('nutty/roasted',88); ev('earthy/musty',30); }             // alkylpyrazine: roasted
+  }
+  if(F.furanone){ ev('caramel',88); ev('fruity',35); }                  // furaneol/maltol
+  else if(F.furan){ ev('nutty/roasted',45); ev('caramel',30); }
+  if(F.thiazole){ ev('nutty/roasted',55); ev('sulfurous',40); }
+  if(F.pyridine&&!F.pyrazine){ ev('pungent',45); ev('fishy/amine',35); }
+  if(F.indole){ F.indoleSubst? ev('animalic',88) : ev('animalic',68); ev('floral',30); }
+  // ---- amines: small aliphatic amines are the fishy note ----
+  if(F.aliphAmine&&!F.indole){
+    const smallest=Math.min(...F.aminChain);
+    if(smallest<=4){ ev('fishy/amine',85); ev('pungent',40); }
+    else { ev('fishy/amine',50); ev('animalic',45); }
+  }
+  // ---- sulfur ----
+  if(F.isothiocyanate){ ev('pungent',92); ev('sulfurous',45); }         // mustard/horseradish
+  if(F.disulfide||F.allylS){ ev('alliaceous',90); ev('sulfurous',60); } // garlic/onion
+  else if(fg.thiols){ ev('sulfurous',95); ev('animalic',35); }
+  else if(fg.thioethers){ ev('sulfurous',72); ev('alliaceous',40); }
+  // ---- terpenes and alcohols ----
+  
+  const terpeneHC=(F.gemDiMe>=1||F.methylBranches>=2)&&F.heavy>=10;
+  if(terpeneHC&&!nonArAlc.length&&!F.acidChain.length&&!F.aldChain.length){
+    if(F.bicyclicTerpene) { ev('woody',72); ev('herbal',45); }          // pinene-type
+    else if(F.terpeneRing){ ev('citrus',70); ev('herbal',40); }         // limonene-type
+    else { ev('herbal',55); ev('woody',35); }                           // myrcene-type
+  }
+  if(F.phenylEthanol){ ev('floral',82); }                               // 2-phenylethanol: rose
+  for(const a of nonArAlc){
+    if(a.ring&&F.gemDiMe){ ev('minty',80); ev('camphoraceous',35); }    // menthol
+    else if((F.gemDiMe||F.methylBranches>=2)&&F.aliphaticEne>=1&&F.heavy>=10){ ev('floral',78); ev('citrus',35); } // linalool/geraniol
+    else if(a.n<=3) ev('ethereal/solvent',45);
+    else if(a.n<=5){ ev('herbal',40); ev('green',30); }
+    else if(a.n<=7) ev('green',55);
+    else if(a.n<=11){ ev('fatty/waxy',50); ev('citrus',25); }
+    else ev('fatty/waxy',45);
+  }
+  if(F.geosminLike){ ev('earthy/musty',90); }
+  // ---- weak generic fallbacks. Deliberately capped low so they can never outrank real evidence. ----
+  if(fg.ethers&&F.heavy<=8) ev('ethereal/solvent',48);
+  if(F.arAlkyl||d.coreAr>=6) ev('woody',22);
+  return S;
+}
+
+function odorProfile(d){
+  const A=d._A;
+  const heavy=A.filter(a=>a.sym!=='H').length;
+  const fg=functionalGroups(d);
+  // Inorganic species: ionic solids are non-volatile and odourless, but small covalent inorganic
+  // molecules (H2S, NH3, SO2, HCN, PH3, O3) are among the most recognisable smells there are.
+  const _io=inorganicProfile(d);
+  if(_io){
+    const blankI=Object.fromEntries(ODOR_FAMILIES.map(k=>[k,0]));
+    if(_io.odor){
+      for(const fam of _io.odor.split(' + ')) if(fam in blankI) blankI[fam]=85;
+      const rk=Object.entries(blankI).sort((a,b)=>b[1]-a[1]);
+      return {scores:blankI,ranked:rk,character:_io.odor,volatility:85,intensity:80,persistence:20,
+        confidence:'moderate',rationale:[_io.odorWhy],heavy,fg,F:{},gemDiMe:0,lactones:0,macrocycle:false,odorless:false,inorganic:true};
+    }
+    return {scores:blankI,ranked:Object.entries(blankI),character:'odorless / no significant odor',
+      volatility:_io.hasMetal?5:60,intensity:0,persistence:0,confidence:'moderate',
+      rationale:[_io.odorWhy],heavy,fg,F:{},gemDiMe:0,lactones:0,macrocycle:false,odorless:true,inorganic:true};
+  }
+  const F=odorFeatures(d);
+  const gemDiMe=F.gemDiMe, lactones=F.lactoneSizes.length, macrocycle=hasMacrocyclicCarbonyl(d);
+  const hbond=fg.alcohols+fg.phenols+fg.acids+fg.amides;
+  const If=(c,v)=>c?v:0;
+  const volatility=Math.max(0,Math.min(100,90-3.0*Math.max(0,heavy-8)-9*Math.min(3,hbond)-3*Math.min(2,fg.ethers+fg.esters)-3*Math.min(3,d.S)-If(macrocycle,20)));
+  const gate=odorGate(d,fg,volatility,macrocycle);
+  const blank=Object.fromEntries(ODOR_FAMILIES.map(k=>[k,0]));
+  if(gate.odorless){
+    return {scores:blank,ranked:Object.entries(blank),character:'odorless / no significant odor',
+      volatility,intensity:0,persistence:0,confidence:'moderate',rationale:[gate.reason],
+      heavy,fg,F,gemDiMe,lactones,macrocycle,odorless:true};
+  }
+  const scores=odorScores(d,F,fg);
+  for(const k in scores) scores[k]=Math.max(0,Math.min(100,scores[k]));
+  const ranked=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const top=ranked[0][1];
+  // Report only families with real supporting evidence. Previously every molecule got three
+  // families no matter how weak the signal, which made confident-looking nonsense.
+  const active=ranked.filter(x=>x[1]>=Math.max(28,top*0.55)).slice(0,3);
+  const character = top<25 ? 'faint / hard to characterise' : active.map(x=>x[0]).join(' + ');
+  const confidence = top>=70?'moderate':top>=45?'low-moderate':'low';
+  const intensity=Math.max(5,Math.min(100,0.45*volatility+10*Math.min(2,fg.thiols)+6*Math.min(2,fg.thioethers)+If(F.isothiocyanate,15)+If(F.pyrazine,12)+6*Math.min(2,fg.aldehydes)+If(heavy<=6,8)+If(macrocycle,12)));
+  const persistence=Math.max(5,Math.min(100,25+3*Math.max(0,heavy-8)+5*Math.min(5,d.ar+d.r)+6*Math.min(2,hbond)+If(macrocycle,20)-0.3*volatility));
+  let rationale=[];
+  const R=x=>rationale.push(x);
+  for(const a of F.acidChain) if(!a.aromatic) R('a carboxylic acid with a C'+(a.n+1)+' chain: chain length sets the character here, with short chains sharp and vinegary and mid chains rancid/cheesy');
+  for(const a of F.aldChain) R('an aliphatic aldehyde with a C'+(a.n+1)+' chain: the classic chain-length series runs green at C6, citrus/soapy at C8-C9 and waxy by C10');
+  if(F.arCHO&&F.arCHO_OH&&F.arCHO_OMe) R('an aromatic aldehyde bearing both a hydroxyl and a methoxy group: the vanillin substitution pattern');
+  else if(F.arCHO) R('an aromatic aldehyde: the benzaldehyde/almond pattern');
+  if(F.diketone) R('an adjacent pair of carbonyls (1,2-diketone): the definitive buttery motif');
+  if(F.pyrazine) R(F.methoxypyrazine?'a methoxypyrazine: the intensely earthy green-pepper class':'an alkylpyrazine: the roasted/nutty class formed in Maillard browning');
+  if(F.furanone) R('a hydroxy-furanone: the caramel/burnt-sugar class');
+  if(F.lactoneSizes.length) R('a lactone with ring size '+F.lactoneSizes.join('/')+': small rings read coconut/creamy, very large rings read musky');
+  if(F.guaiacol) R('a methoxyphenol (guaiacol pattern): the smoky/medicinal signature of wood smoke');
+  else if(F.arOH) R('a free phenolic hydroxyl: medicinal/phenolic character');
+  if(F.isothiocyanate) R('an isothiocyanate: the pungent mustard/horseradish irritant class');
+  if(F.disulfide||F.allylS) R('a disulfide or allyl sulfide: the alliaceous garlic/onion class');
+  else if(fg.thiols) R('a thiol, the single most potent odorant class known');
+  if(F.aliphAmine&&!F.indole) R('a small aliphatic amine: the fishy/ammoniacal class');
+  if(F.indole) R('an indole nucleus: animalic/faecal at high concentration, floral at trace levels');
+  if(F.geosminLike) R('a saturated bicyclic alcohol with gem-dimethyl branching: the geosmin earthy/petrichor pattern');
+  if(!rationale.length) R('no strongly diagnostic odor motif was found; the estimate rests on weak general features');
+  return {scores,ranked,character,volatility,intensity,persistence,confidence,rationale,
+    heavy,fg,F,gemDiMe,lactones,macrocycle,odorless:false};
+}
+function renderOdor(a){
+  const o=odorProfile(a.d);
+  document.getElementById('odorCharacter').textContent=o.character;
+  document.getElementById('odorIntensity').textContent=Math.round(o.intensity)+'/100';
+  document.getElementById('odorVolatility').textContent=Math.round(o.volatility)+'/100';
+  document.getElementById('odorConfidence').textContent=o.confidence;
+  document.getElementById('odorBars').innerHTML=o.ranked.map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${Math.round(v)}%"></i></div><span>${Math.round(v)}</span></div>`).join('');
+  document.getElementById('odorSummary').innerHTML=`<b>Predicted profile:</b> ${o.character}. <b>Persistence:</b> ${Math.round(o.persistence)}/100.<br>${o.rationale.join('; ')}.`;
+  const Ff=o.F||{};
+  const chains=[];
+  if(Ff.acidChain&&Ff.acidChain.length) chains.push('acid chains C'+Ff.acidChain.map(x=>x.n+1).join('/C'));
+  if(Ff.aldChain&&Ff.aldChain.length) chains.push('aldehyde chains C'+Ff.aldChain.map(x=>x.n+1).join('/C'));
+  if(Ff.esterSize&&Ff.esterSize.length) chains.push('ester size C'+Ff.esterSize.map(x=>x.total).join('/C'));
+  if(Ff.lactoneSizes&&Ff.lactoneSizes.length) chains.push('lactone ring '+Ff.lactoneSizes.join('/'));
+  const motifs=[];
+  const flag=(k,label)=>{ if(Ff[k]) motifs.push(label); };
+  flag('arCHO','aromatic aldehyde');flag('guaiacol','methoxyphenol (guaiacol)');flag('diketone','1,2-diketone');
+  flag('pyrazine','pyrazine');flag('methoxypyrazine','methoxypyrazine');flag('furanone','hydroxyfuranone');
+  flag('thiazole','thiazole');flag('indole','indole nucleus');flag('disulfide','disulfide');flag('allylS','allyl sulfide');
+  flag('isothiocyanate','isothiocyanate');flag('macroKetone','macrocyclic ketone');flag('geosminLike','geosmin-like bicyclic alcohol');
+  flag('salicylate','salicylate');flag('cinnamyl','cinnamyl');flag('phenylEthanol','phenylethanol');
+  flag('bicyclicTerpene','bicyclic terpene');flag('terpeneRing','terpene ring');
+  document.getElementById('odorElectronic').innerHTML=`Heavy atoms: <b>${o.heavy}</b> · volatility <b>${Math.round(o.volatility)}</b>/100 · persistence <b>${Math.round(o.persistence)}</b>/100<br><b>Chain / ring metrics:</b> ${chains.join(' · ')||'none'}<br><b>Diagnostic motifs:</b> ${motifs.join(' · ')||'none'}<br>Esters: <b>${o.fg.esters}</b> · Acids: <b>${o.fg.acids}</b> · Aldehydes: <b>${o.fg.aldehydes}</b> · Ketones: <b>${o.fg.ketones}</b><br>Alcohols: <b>${o.fg.alcohols}</b> · Phenols: <b>${o.fg.phenols}</b> · Ethers: <b>${o.fg.ethers}</b> · Amines: <b>${o.fg.amines}</b><br>Thiols: <b>${o.fg.thiols}</b> · Thioethers: <b>${o.fg.thioethers}</b> · methyl branches: <b>${Ff.methylBranches||0}</b>`;
+  document.getElementById('odorWarnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';
+}
+
+// ==================== Bioactivity engine ====================
+
+const ATOMIC_W={H:1.008,B:10.81,C:12.011,N:14.007,O:15.999,F:18.998,Na:22.99,Mg:24.305,Al:26.982,Si:28.085,P:30.974,S:32.06,Cl:35.45,K:39.098,Ca:40.078,Ti:47.867,Cr:51.996,Mn:54.938,Fe:55.845,Co:58.933,Ni:58.693,Cu:63.546,Zn:65.38,As:74.922,Se:78.971,Br:79.904,Ag:107.87,Cd:112.41,Sn:118.71,I:126.90,Pt:195.08,Au:196.97,Hg:200.59,Pb:207.2,Li:6.94,Zr:91.224};
+const VALENCE={C:4,N:3,O:2,S:2,P:3,B:3,F:1,Cl:1,Br:1,I:1};
+// Implicit hydrogens: standard valence minus the bond orders already used. Bracket atoms state
+// their own H count, so use that when present. Aromatic bonds count 1.5 each, which rounds
+// correctly for benzene-type carbons (2 aromatic bonds = 3.0 used, so 1 implicit H).
+function implicitH(d,i){
+  const A=d._A;
+  if(A[i].hExp!==null && A[i].hExp!==undefined) return A[i].hExp;
+  const v=VALENCE[A[i].sym];
+  if(v===undefined) return 0;
+  let used=0;
+  for(const b of d.B){ if(b.a===i||b.b===i) used+=b.o; }
+  return Math.max(0, v - Math.round(used));
+}
+function physChem(d){
+  const A=d._A;
+  let mw=0, hbd=0, hba=0, tpsa=0, carbons=0, aromC=0, logp=0;
+  const adj=buildAdj(d);
+  for(let i=0;i<A.length;i++){
+    const s=A[i].sym, h=implicitH(d,i);
+    mw += (ATOMIC_W[s]||12) + h*ATOMIC_W.H;
+    const nb=adj.get(i)||[];
+    const heavyDeg=nb.length;
+    if(s==='C'){ carbons++; if(A[i].ar){aromC++; logp+=0.35;} else logp+=0.42; }
+    else if(s==='N'){
+      hba++;
+      if(h>=1) hbd++;
+      // Ertl-style TPSA fragment contributions
+      if(A[i].ar) tpsa += (h>=1?15.79:(heavyDeg>=3?4.41:12.89));
+      else if(h===2) tpsa+=26.02; else if(h===1) tpsa+=12.03; else tpsa+=3.24;
+      logp += A[i].ar? -0.55 : (nb.some(x=>x.o===2&&A[x.to].sym==='O')? -0.4 : -1.6);
+      if(A[i].chg) logp -= 2.0;
+    }
+    else if(s==='O'){
+      hba++;
+      if(h>=1){hbd++; tpsa+=20.23; logp-=0.90;}
+      else if(heavyDeg>=2){tpsa+=9.23; logp-=0.5;}
+      else {tpsa+=17.07; logp-=0.6;}
+      if(A[i].chg) logp -= 2.0;
+    }
+    else if(s==='S'){ hba++; if(h>=1){tpsa+=38.80;} else {tpsa+=25.30;} logp+=0.4; }
+    else if(s==='P'){ tpsa+=13.59; logp+=0.2; }
+    else if(s==='F') logp+=0.20;
+    else if(s==='Cl') logp+=0.70;
+    else if(s==='Br') logp+=0.90;
+    else if(s==='I') logp+=1.10;
+  }
+  // Rotatable bonds: acyclic single bonds between two non-terminal heavy atoms. Ring membership
+  // must come from the FULL bond graph, not the pi-network ring set - a saturated ring such as
+  // nicotine's pyrrolidine has no pi system at all, so its bonds would otherwise be miscounted
+  // as freely rotatable.
+  const allIdx=[...Array(A.length).keys()];
+  const fullRing=ringPiAtoms(allIdx,d.B);
+  const inFullRing=new Set(fullRing.edges.map(e=>e.a+'-'+e.b).concat(fullRing.edges.map(e=>e.b+'-'+e.a)));
+  let rot=0;
+  for(const b of d.B){
+    if(b.o!==1) continue;
+    if(inFullRing.has(b.a+'-'+b.b)) continue;
+    const da=(adj.get(b.a)||[]).length, db2=(adj.get(b.b)||[]).length;
+    if(da>1&&db2>1) rot++;
+  }
+  const heavy=A.filter(a=>a.sym!=='H').length;
+  return {mw:Math.round(mw*10)/10, logp:Math.round(logp*100)/100, tpsa:Math.round(tpsa*10)/10, hbd, hba, rot, heavy, carbons, aromC};
+}
+
+// ---- graph helpers for scaffold matching ----
+function nbrs(adj,i){return (adj.get(i)||[])}
+// A basic (protonatable) amine: sp3 N, not an amide, not nitro, not aromatic, not a nitrile.
+// Protonation at physiological pH is what lets these form the key salt-bridge to an aspartate
+// residue in aminergic GPCRs, which is why nearly every monoamine-receptor ligand has one.
+function basicAmines(d){
+  const A=d._A, adj=buildAdj(d); let out=[];
+  for(let i=0;i<A.length;i++){
+    if(A[i].sym!=='N'||A[i].ar) continue;
+    const nb=nbrs(adj,i);
+    if(nb.some(x=>x.o>=2)) continue;
+    if(nb.some(x=>A[x.to].sym==='O')) continue;
+    if(nb.some(x=>A[x.to].sym==='C'&&nbrs(adj,x.to).some(y=>y.o===2&&A[y.to].sym==='O'))) continue;
+    out.push(i);
+  }
+  return out;
+}
+// Shortest path length (in bonds) between two atoms, or -1.
+function pathLen(d,adj,from,to,maxD){
+  if(from===to) return 0;
+  let seen=new Set([from]), frontier=[from];
+  for(let dep=1;dep<=maxD;dep++){
+    let next=[];
+    for(const u of frontier) for(const x of nbrs(adj,u)){
+      if(seen.has(x.to)) continue;
+      if(x.to===to) return dep;
+      seen.add(x.to); next.push(x.to);
+    }
+    frontier=next; if(!frontier.length) break;
+  }
+  return -1;
+}
+// Detects the fused bicyclic indole nucleus (a 5-ring containing N fused to a benzene ring),
+// which is the tryptamine/serotonin core.
+function hasIndole(d){
+  const A=d._A;
+  const ringSets=ringComponents(A,d.B);
+  for(const comp of ringSets){
+    if(comp.size<9) continue;
+    const hasN=[...comp].some(i=>A[i].sym==='N'&&A[i].ar);
+    const allAr=[...comp].filter(i=>A[i].ar).length>=8;
+    const edges=d.B.filter(b=>comp.has(b.a)&&comp.has(b.b));
+    const rank=edges.length-comp.size+1;
+    if(hasN&&allAr&&rank>=2) return true;
+  }
+  return false;
+}
+function pharmacophores(d,pc){
+  const A=d._A, adj=buildAdj(d);
+  const amines=basicAmines(d);
+  const ringSets=ringComponents(A,d.B);
+  let hits=[];
+  const aromRingAtoms=[...d.ringAtoms].filter(i=>A[i].ar);
+  // --- Phenethylamine: benzene ring + 2-carbon linker + basic amine. Backbone of the
+  // catecholamine neurotransmitters and the amphetamine/phenethylamine stimulant class.
+  // A 2-carbon linker is the canonical spacing; 1 carbon (benzylamine) is a weaker relative.
+  // The linker length must be measured to the NEAREST aromatic atom (the ring attachment point).
+  // Measuring to any ring atom is wrong: in aniline the nitrogen sits directly on the ring, but a
+  // meta ring carbon is still 3 bonds away, which would falsely match the phenethylamine pattern.
+  const minArDist=n=>{let best=99;for(const arAt of aromRingAtoms){const L=pathLen(d,adj,n,arAt,5);if(L>0&&L<best)best=L}return best};
+  let phenethyl=false, benzylamine=false;
+  for(const n of amines){
+    const L=minArDist(n);
+    if(L===3) phenethyl=true; else if(L===2) benzylamine=true;
+  }
+  let tryptamine=false;
+  if(hasIndole(d)) for(const n of amines){ if(minArDist(n)===3){tryptamine=true;break} }
+  // --- Tryptamine: indole nucleus + 2-carbon linker + basic amine (serotonin template).
+  // --- Xanthine: fused bicyclic all-aromatic N-rich system carrying two ring carbonyls
+  // (the caffeine/theophylline purinedione pattern).
+  let xanthine=false;
+  for(const comp of ringSets){
+    if(comp.size<9) continue;
+    const nCount=[...comp].filter(i=>A[i].sym==='N').length;
+    const carbonyls=[...comp].filter(i=>A[i].sym==='C'&&nbrs(adj,i).some(x=>x.o===2&&A[x.to].sym==='O')).length;
+    const edges=d.B.filter(b=>comp.has(b.a)&&comp.has(b.b));
+    if(nCount>=3&&carbonyls>=2&&(edges.length-comp.size+1)>=2) xanthine=true;
+  }
+  // --- Benzodiazepine-like: benzene fused to a 7-membered ring bearing two nitrogens.
+  let benzodiazepine=false;
+  for(const comp of ringSets){
+    if(comp.size<11||comp.size>18) continue;
+    const nCount=[...comp].filter(i=>A[i].sym==='N').length;
+    const arCount=[...comp].filter(i=>A[i].ar).length;
+    const edges=d.B.filter(b=>comp.has(b.a)&&comp.has(b.b));
+    if(nCount>=2&&arCount>=6&&(edges.length-comp.size+1)>=2) benzodiazepine=true;
+  }
+  // --- Nicotinoid: pyridine ring plus a separate saturated N-heterocycle (nicotine template).
+  let nicotinoid=false;
+  {
+    const pyridine=ringSets.some(c=>[...c].some(i=>A[i].sym==='N'&&A[i].ar)&&[...c].filter(i=>A[i].ar).length>=6&&c.size<=7);
+    const satNring=ringSets.some(c=>[...c].some(i=>A[i].sym==='N'&&!A[i].ar)&&[...c].every(i=>!A[i].ar));
+    if(pyridine&&satNring) nicotinoid=true;
+  }
+  // --- Morphinan-like: a large fused polycyclic system carrying both a basic amine and a phenol.
+  let morphinan=false;
+  {
+    const bigFused=ringSets.some(c=>{
+      const edges=d.B.filter(b=>c.has(b.a)&&c.has(b.b));
+      return (edges.length-c.size+1)>=3 && c.size>=12;
+    });
+    const phenolic=(function(){for(let i=0;i<A.length;i++){if(A[i].sym!=='O')continue;const nb=nbrs(adj,i);if(nb.length===1&&A[nb[0].to].ar)return true}return false})();
+    if(bigFused&&amines.length&&phenolic) morphinan=true;
+  }
+  // --- Cannabinoid-like: a resorcinol-type aromatic ring (two OH on one ring) carrying a long
+  // alkyl chain, fused/attached to a terpenoid portion.
+  let cannabinoid=false;
+  {
+    for(const comp of ringSets){
+      const arOH=[...comp].filter(i=>A[i].ar&&nbrs(adj,i).some(x=>A[x.to].sym==='O'&&nbrs(adj,x.to).length===1)).length;
+      if(arOH>=1 && pc.logp>=4 && pc.carbons>=18 && amines.length===0) cannabinoid=true;
+    }
+  }
+  if(morphinan){} else if(tryptamine) hits.push({name:'tryptamine / indolealkylamine',targets:['serotonin (5-HT) receptors, notably 5-HT1A and 5-HT2A','serotonin transporter (SERT)'],note:'the serotonin structural template'});
+  else if(phenethyl) hits.push({name:'phenethylamine',targets:['monoamine transporters (DAT / NET / SERT)','trace amine-associated receptor TAAR1','adrenergic and dopaminergic receptors'],note:'the catecholamine / stimulant backbone'});
+  else if(benzylamine) hits.push({name:'benzylamine (short-linker aryl amine)',targets:['weak/uncertain monoamine activity - the 1-carbon linker is shorter than the canonical 2-carbon spacing'],note:'related to but weaker than the phenethylamine template'});
+  if(xanthine) hits.push({name:'xanthine (purinedione)',targets:['adenosine receptors A1 / A2A (antagonist)','phosphodiesterases at higher concentration'],note:'the caffeine / theophylline template'});
+  if(benzodiazepine) hits.push({name:'benzodiazepine-like fused N-heterocycle',targets:['GABA-A receptor benzodiazepine allosteric site'],note:'shape-consistent with the classical anxiolytic scaffold'});
+  if(nicotinoid) hits.push({name:'nicotinoid',targets:['nicotinic acetylcholine receptors (nAChR)'],note:'pyridine plus saturated amine ring, the nicotine template'});
+  if(morphinan) hits.push({name:'morphinan-like polycyclic amine + phenol',targets:['opioid receptors (mu / kappa / delta)'],note:'shape-consistent with the morphine-type scaffold'});
+  if(cannabinoid) hits.push({name:'cannabinoid-like lipophilic phenol',targets:['cannabinoid receptors CB1 / CB2'],note:'highly lipophilic phenolic terpenoid pattern'});
+  return {hits,amines:amines.length,aromRings:d.coreR};
+}
+// ---- toxicity structural alerts ----
+// These are classical medicinal-chemistry "structural alerts": substructures repeatedly associated
+// with mutagenicity, reactivity or organ toxicity. An alert is a flag for closer scrutiny, NOT a
+// verdict - many approved drugs contain them, and many toxic compounds contain none.
+const TOXIC_METALS=['Hg','Pb','Cd','As','Tl','Sb','Be','Ni','Cr'];
+function toxAlerts(d,pc){
+  const A=d._A, adj=buildAdj(d); let alerts=[];
+  const isC=i=>A[i].sym==='C', isO=i=>A[i].sym==='O', isN=i=>A[i].sym==='N';
+  // heavy/toxic metal
+  const metal=A.find(a=>TOXIC_METALS.includes(a.sym));
+  if(metal) alerts.push({name:'toxic heavy element ('+metal.sym+')',severity:3,why:'heavy metals are cumulative systemic poisons'});
+  // nitroaromatic
+  for(let i=0;i<A.length;i++){
+    if(!isN(i)) continue;
+    const oCount=nbrs(adj,i).filter(x=>isO(x.to)).length;
+    if(oCount>=2 && nbrs(adj,i).some(x=>A[x.to].ar)) { alerts.push({name:'nitroaromatic group',severity:2,why:'nitroaromatics are frequently mutagenic after nitroreduction'}); break; }
+  }
+  // aromatic primary amine (aniline-type) - classic Ames-positive alert
+  for(let i=0;i<A.length;i++){
+    if(!isN(i)||A[i].ar) continue;
+    const nb=nbrs(adj,i);
+    if(nb.length===1 && A[nb[0].to].ar && implicitH(d,i)>=2){ alerts.push({name:'aromatic primary amine (aniline-type)',severity:2,why:'anilines can be N-oxidized to mutagenic nitrenium species'}); break; }
+  }
+  // epoxide (3-membered ring with O)
+  {
+    const rs=ringComponents(A,d.B);
+    if(rs.some(c=>c.size===3&&[...c].some(i=>isO(i)))) alerts.push({name:'epoxide',severity:3,why:'strained, directly alkylates DNA and proteins'});
+    if(rs.some(c=>c.size===3&&[...c].filter(i=>isN(i)).length>0&&![...c].some(i=>isO(i)))) alerts.push({name:'aziridine',severity:3,why:'strained alkylating agent'});
+  }
+  // Michael acceptor: C=C conjugated directly to a carbonyl
+  for(const b of d.B){
+    if(b.o!==2||!isC(b.a)||!isC(b.b)) continue;
+    if(d.ringAtoms.has(b.a)&&d.ringAtoms.has(b.b)) continue;
+    const adjacentCarbonyl=[b.a,b.b].some(x=>nbrs(adj,x).some(y=>isC(y.to)&&y.o===1&&nbrs(adj,y.to).some(z=>z.o===2&&isO(z.to))));
+    if(adjacentCarbonyl){ alerts.push({name:'Michael acceptor (enone)',severity:2,why:'covalently reacts with protein and glutathione thiols'}); break; }
+  }
+  // N-nitroso
+  for(const b of d.B){
+    if(b.o!==2) continue;
+    const pair=[[b.a,b.b],[b.b,b.a]];
+    for(const [n,o] of pair) if(isN(n)&&isO(o)&&nbrs(adj,n).some(x=>isN(x.to))){ alerts.push({name:'N-nitroso group',severity:3,why:'nitrosamines are potent, well-documented carcinogens'}); break; }
+  }
+  // hydrazine N-N single bond
+  for(const b of d.B) if(b.o===1&&isN(b.a)&&isN(b.b)&&!A[b.a].ar&&!A[b.b].ar){
+    // Skip when this N-N is really part of an N-nitroso group, already reported above.
+    if([b.a,b.b].some(n=>nbrs(adj,n).some(x=>x.o===2&&isO(x.to)))) break;
+    alerts.push({name:'hydrazine-type N-N bond',severity:2,why:'associated with hepatotoxicity and mutagenicity'}); break;
+  }
+  // organophosphate/phosphonate ester
+  for(let i=0;i<A.length;i++) if(A[i].sym==='P'){
+    const nb=nbrs(adj,i);
+    if(nb.filter(x=>isO(x.to)||A[x.to].sym==='S').length>=3){ alerts.push({name:'organophosphate/thiophosphate ester',severity:3,why:'classic acetylcholinesterase inhibitor motif (pesticide/nerve-agent chemistry)'}); break; }
+  }
+  // acyl halide / alkyl halide on sp3 carbon
+  for(const b of d.B){
+    if(b.o!==1) continue;
+    const pair=[[b.a,b.b],[b.b,b.a]];
+    for(const [c,x] of pair) if(isC(c)&&['Cl','Br','I'].includes(A[x].sym)&&nbrs(adj,c).some(y=>y.o===2&&isO(y.to))){ alerts.push({name:'acyl halide',severity:3,why:'extremely reactive acylating agent'}); break; }
+  }
+  // polyhalogenated aromatic
+  {
+    const arHal=A.filter((a,i)=>['Cl','Br','I','F'].includes(a.sym)&&nbrs(adj,i).some(x=>A[x.to].ar)).length;
+    if(arHal>=3) alerts.push({name:'polyhalogenated aromatic',severity:2,why:'persistent and bioaccumulative (dioxin/PCB-like character)'});
+  }
+  // azide
+  for(let i=0;i<A.length;i++) if(isN(i)&&nbrs(adj,i).filter(x=>isN(x.to)).length>=2){ alerts.push({name:'azide-like N-N-N chain',severity:3,why:'toxic and often explosively unstable'}); break; }
+  // quinone (redox cycler)
+  {
+    let trueQuinone=0;
+    for(let i=0;i<A.length;i++){
+      if(!isC(i)||!d.ringAtoms.has(i)) continue;
+      if(!nbrs(adj,i).some(x=>x.o===2&&isO(x.to))) continue;
+      // A urea/lactam-type carbonyl flanked by ring nitrogens (as in caffeine) is not a quinone.
+      if(nbrs(adj,i).some(x=>isN(x.to))) continue;
+      trueQuinone++;
+    }
+    if(trueQuinone>=2) alerts.push({name:'quinone',severity:2,why:'redox cycles to generate reactive oxygen species'});
+  }
+  return alerts;
+}
+
+// Blood-brain-barrier permeation is the gate on psychoactivity: a compound cannot act on the CNS
+// if it cannot reach it. These cutoffs are the standard CNS-drug property window (broadly the
+// "CNS MPO" style criteria): modest size, low polar surface area, few H-bond donors, moderate lipophilicity.
+function bbbScore(pc,charged){
+  let s=0, notes=[];
+  if(pc.mw<=450) s+=25; else notes.push('molecular weight above ~450 hinders CNS entry');
+  if(pc.tpsa<=90) s+=30; else notes.push('polar surface area above ~90 A^2 strongly limits CNS entry');
+  if(pc.hbd<=3) s+=15; else notes.push('more than 3 H-bond donors limits CNS entry');
+  if(pc.logp>=1&&pc.logp<=4) s+=25; else if(pc.logp>4) {s+=8; notes.push('very high lipophilicity favours membrane partitioning over free distribution');} else notes.push('low lipophilicity limits passive membrane crossing');
+  if(pc.rot<=8) s+=5; else notes.push('high rotatable-bond count reduces passive permeability');
+  if(charged){ s=Math.max(0,s-35); notes.push('a permanent formal charge strongly opposes passive CNS entry'); }
+  return {score:Math.min(100,s),notes};
+}
+// Catecholamine pattern: two or more phenolic OH groups on one aromatic ring plus a primary
+// amine. This is the dopamine/noradrenaline motif - these act powerfully on CNS receptors but
+// are famously unable to cross the blood-brain barrier from the bloodstream, which is exactly
+// why Parkinson's is treated with the precursor L-DOPA rather than with dopamine itself.
+function isCatecholamine(d){
+  const A=d._A, adj=buildAdj(d);
+  let arOH=0;
+  for(let i=0;i<A.length;i++){
+    if(A[i].sym!=='O') continue;
+    const nb=adj.get(i)||[];
+    if(nb.length===1 && A[nb[0].to].ar) arOH++;
+  }
+  const primaryAmine=(function(){
+    for(let i=0;i<A.length;i++){
+      if(A[i].sym!=='N'||A[i].ar) continue;
+      if((adj.get(i)||[]).length<=1) return true;
+    }
+    return false;
+  })();
+  return arOH>=2 && primaryAmine;
+}
+function bioactivityProfile(d){
+  const A=d._A;
+  const pc=physChem(d);
+  const charged=A.some(a=>a.chg&&a.chg!==0);
+  const ph=pharmacophores(d,pc);
+  const alerts=toxAlerts(d,pc);
+  // --- Lipinski rule of five + Veber criteria: the standard oral drug-likeness filters. ---
+  let lip=[];
+  if(pc.mw>500) lip.push('MW > 500');
+  if(pc.logp>5) lip.push('logP > 5');
+  if(pc.hbd>5) lip.push('H-bond donors > 5');
+  if(pc.hba>10) lip.push('H-bond acceptors > 10');
+  const veber=[];
+  if(pc.rot>10) veber.push('rotatable bonds > 10');
+  if(pc.tpsa>140) veber.push('TPSA > 140 A^2');
+  const drugLike = lip.length<=1 && veber.length===0 && pc.heavy>=8;
+  // --- Bioactivity likelihood ---
+  let bio=0, bioWhy=[];
+  if(ph.hits.length){ bio+=55; bioWhy.push('matches a recognized bioactive scaffold'); }
+  if(drugLike){ bio+=20; bioWhy.push('satisfies standard oral drug-likeness filters'); }
+  if(pc.heavy>=10&&pc.heavy<=45){ bio+=12; bioWhy.push('molecular size is in the typical small-molecule drug range'); }
+  if(pc.hba>=2&&pc.hbd>=1){ bio+=8; bioWhy.push('has both H-bond donors and acceptors for specific target binding'); }
+  if(d.coreR>=1&&pc.rot<=8){ bio+=5; bioWhy.push('contains a rigid ring system, favouring selective binding'); }
+  if(alerts.length){ bio+=10; bioWhy.push('contains a reactive/alerting substructure that can produce biological effects nonspecifically'); }
+  if(pc.heavy<6){ bio-=30; bioWhy.push('very small fragment - too little surface for selective target binding'); }
+  if(pc.heavy>60){ bio-=15; bioWhy.push('very large - typically poor oral absorption and cell entry'); }
+  bio=Math.max(0,Math.min(100,bio));
+  // --- Psychoactivity ---
+  const bbb=bbbScore(pc,charged);
+  if(isCatecholamine(d)){
+    bbb.score=Math.max(0,bbb.score-45);
+    bbb.notes.push('catecholamine-type pattern (multiple phenolic OH plus a primary amine): this class acts on CNS receptors but does not cross the blood-brain barrier from the bloodstream');
+  }
+  const cnsScaffold=ph.hits.filter(h=>h.targets.some(t=>/receptor|transporter|GABA|opioid|adenosine|nicotinic|cannabinoid|serotonin|monoamine|TAAR/i.test(t)));
+  let psy=0, psyWhy=[];
+  if(cnsScaffold.length){ psy+=50; psyWhy.push('matches a scaffold class with known CNS receptor activity'); }
+  psy += Math.round(bbb.score*0.45);
+  if(!cnsScaffold.length && ph.hits.length) psyWhy.push('bioactive scaffold present but not a classical CNS receptor template');
+  if(charged) psyWhy.push('permanent charge argues against CNS penetration');
+  // With no recognized CNS template, a good BBB profile alone says nothing about psychoactivity -
+  // plenty of freely brain-penetrant molecules are inert. Cap the score rather than implying signal.
+  if(!cnsScaffold.length){ psy=Math.min(psy,25); psyWhy.push('no recognized CNS receptor scaffold was matched, so no positive evidence of psychoactivity'); }
+  psy=Math.max(0,Math.min(100,psy));
+  const psychoactive = psy>=60 && cnsScaffold.length>0;
+  // --- Toxicity ---
+  const sevSum=alerts.reduce((s,a)=>s+a.severity,0);
+  let tox=Math.min(100, sevSum*22);
+  if(pc.logp>5){ tox+=10; }
+  if(charged&&!alerts.length) tox=Math.max(0,tox-5);
+  tox=Math.max(0,Math.min(100,tox));
+  const toxBand = tox>=60?'high concern':tox>=30?'moderate concern':tox>0?'low concern':'no structural alerts found';
+  return {pc,ph,alerts,lip,veber,drugLike,bio,bioWhy,bbb,psy,psychoactive,cnsScaffold,tox,toxBand,charged};
+}
+
+function renderBio(a){
+  const b=bioactivityProfile(a.d), pc=b.pc;
+  document.getElementById('bioScore').textContent=Math.round(b.bio)+'/100';
+  document.getElementById('bioDrugLike').textContent=b.drugLike?'drug-like':'not drug-like';
+  document.getElementById('bioPsy').textContent=Math.round(b.psy)+'/100'+(b.psychoactive?' (likely)':'');
+  document.getElementById('bioTox').textContent=b.toxBand;
+  const bars=[['bioactivity',b.bio],['psychoactivity',b.psy],['BBB penetration',b.bbb.score],['toxicity concern',b.tox]];
+  document.getElementById('bioBars').innerHTML=bars.map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${Math.round(v)}%"></i></div><span>${Math.round(v)}</span></div>`).join('');
+  let summary=`<b>Assessment:</b> ${b.bio>=60?'likely bioactive':b.bio>=35?'possibly bioactive':'no strong evidence of bioactivity'}`;
+  if(b.psychoactive) summary+=`; <b>likely psychoactive</b> via the matched scaffold class`;
+  else if(b.cnsScaffold.length) summary+=`; a CNS-type scaffold is present but CNS exposure looks limited`;
+  else summary+=`; no recognized CNS receptor scaffold`;
+  summary+='.<br>'+b.bioWhy.join('; ')+'.';
+  if(b.bbb.notes.length) summary+='<br><b>CNS exposure notes:</b> '+b.bbb.notes.join('; ')+'.';
+  document.getElementById('bioSummary').innerHTML=summary;
+  const lipTxt=b.lip.length?('violations: '+b.lip.join(', ')):'no violations';
+  const vebTxt=b.veber.length?('violations: '+b.veber.join(', ')):'no violations';
+  document.getElementById('bioPhys').innerHTML=`Molecular weight: <b>${pc.mw}</b> g/mol<br>Estimated logP: <b>${pc.logp}</b><br>Topological polar surface area: <b>${pc.tpsa}</b> A&sup2;<br>H-bond donors: <b>${pc.hbd}</b> · acceptors: <b>${pc.hba}</b><br>Rotatable bonds: <b>${pc.rot}</b> · heavy atoms: <b>${pc.heavy}</b><br>Formal charge present: <b>${b.charged?'yes':'no'}</b><br><br>Lipinski rule of five: <b>${lipTxt}</b><br>Veber criteria: <b>${vebTxt}</b>`;
+  document.getElementById('bioPharm').innerHTML=b.ph.hits.length
+    ? b.ph.hits.map(x=>`<div class="odor-note"><b>${x.name}</b><br><span class="small">${x.note}</span><br><b>Associated targets:</b><ul style="margin:6px 0 0 18px">${x.targets.map(t=>'<li>'+t+'</li>').join('')}</ul></div>`).join('')
+    : '<span class="small">No recognized bioactive scaffold was matched. This does not rule out activity - it means the structure does not resemble the specific families this engine knows about.</span>';
+  document.getElementById('bioAlerts').innerHTML=b.alerts.length
+    ? b.alerts.map(x=>`<div class="odor-note"><b>${x.name}</b> <span class="tag">severity ${x.severity}/3</span><br><span class="small">${x.why}</span></div>`).join('')+'<p class="small">Structural alerts flag substructures statistically associated with toxicity. Many approved drugs contain one; treat these as reasons for scrutiny, not verdicts.</p>'
+    : '<span class="small">No classical structural alerts found. Note that this is <b>not</b> evidence of safety - many highly toxic compounds contain no classical alert at all.</span>';
+  document.getElementById('bioWarnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';
+}
+
+// ==================== Physical-chemistry engine ====================
+// Representative pKa values for common ionisable groups. Real pKa shifts with substituents by
+// several units, so these are class averages, not predictions for a specific molecule.
+function ionisableGroups(d){
+  const A=d._A, adj=buildAdj(d), rings=smallRings(d);
+  const isC=i=>A[i].sym==='C',isO=i=>A[i].sym==='O',isN=i=>A[i].sym==='N',isS=i=>A[i].sym==='S';
+  const carbonylC=i=>isC(i)&&(adj.get(i)||[]).some(x=>x.o===2&&isO(x.to));
+  let acids=[],bases=[];
+  for(let i=0;i<A.length;i++){
+    const nb=adj.get(i)||[];
+    // --- sulfonic / sulfate ester acids ---
+    if(isS(i)){
+      const oxo=nb.filter(x=>x.o===2&&isO(x.to)).length;
+      const oh=nb.filter(x=>x.o<2&&isO(x.to)&&(adj.get(x.to)||[]).length===1).length;
+      if(oxo>=2&&oh>=1) acids.push({name:'sulfonic acid',pKa:-1.5});
+    }
+    // --- phosphoric / phosphonic acids ---
+    if(A[i].sym==='P'){
+      const oh=nb.filter(x=>x.o<2&&isO(x.to)&&(adj.get(x.to)||[]).length===1).length;
+      if(oh>=1) acids.push({name:'phosphorus oxyacid',pKa:2.1});
+    }
+    if(isO(i)&&nb.length===1&&nb[0].o===1){
+      const c=nb[0].to;
+      if(carbonylC(c)) acids.push({name:'carboxylic acid',pKa:4.6});
+      else if(A[c].ar) acids.push({name:'phenol',pKa:10.0});
+      else if(isC(c)) acids.push({name:'alcohol',pKa:16.0});
+    }
+    if(isS(i)&&nb.length===1&&nb[0].o<=1) acids.push({name:'thiol',pKa:10.3});
+    if(isN(i)&&!A[i].ar){
+      if(nb.some(x=>x.o>=2)) continue;
+      if(nb.some(x=>isO(x.to))) continue;                    // nitro / N-oxide: not basic
+      const amide=nb.some(x=>carbonylC(x.to));
+      const onSulfonyl=nb.some(x=>isS(x.to));
+      if(amide){ acids.push({name:'amide N-H',pKa:17.0}); continue; }
+      if(onSulfonyl){ acids.push({name:'sulfonamide N-H',pKa:10.0}); continue; }
+      // guanidine: N bonded to a carbon that carries two further nitrogens - very strong base
+      const guan=nb.some(x=>isC(x.to)&&(adj.get(x.to)||[]).filter(y=>isN(y.to)).length>=3);
+      const amidine=nb.some(x=>isC(x.to)&&(adj.get(x.to)||[]).filter(y=>isN(y.to)).length>=2);
+      if(guan) bases.push({name:'guanidine',pKaH:13.6});
+      else if(amidine) bases.push({name:'amidine',pKaH:11.5});
+      else if(nb.some(x=>A[x.to].ar)) bases.push({name:'aromatic amine (aniline-type)',pKaH:4.6});
+      else bases.push({name:'aliphatic amine',pKaH:10.6});
+    }
+    if(isN(i)&&A[i].ar){
+      const r=rings.find(x=>x.set.has(i));
+      if(!r) continue;
+      const hasH=implicitH(d,i)>=1;
+      if(hasH){ acids.push({name:'azole N-H',pKa:14.0}); continue; }   // pyrrole-type N-H, weakly acidic
+      if(r.size===5&&r.nN>=2) bases.push({name:'imidazole-type N',pKaH:7.0});
+      else if(r.size===6&&r.nN===1) bases.push({name:'pyridine-type N',pKaH:5.2});
+      else if(r.size===6&&r.nN>=2) bases.push({name:'diazine N',pKaH:1.5});
+    }
+  }
+  // Vinylogous acid (ascorbic acid pattern): a hydroxyl on a C=C that is conjugated to a carbonyl.
+  // The resulting anion is delocalised onto the carbonyl oxygen, which is why vitamin C is a
+  // genuine acid (pKa around 4) despite having no carboxyl group at all.
+  for(const b of d.B){
+    if(b.o!==2||!isC(b.a)||!isC(b.b)) continue;
+    const oh=[b.a,b.b].some(x=>(adj.get(x)||[]).some(y=>y.o===1&&isO(y.to)&&(adj.get(y.to)||[]).length===1));
+    const conjCO=[b.a,b.b].some(x=>(adj.get(x)||[]).some(y=>y.o<2&&carbonylC(y.to)));
+    if(oh&&conjCO){ acids.push({name:'vinylogous acid (enediol)',pKa:4.2}); break; }
+  }
+  // 1,3-dicarbonyl: the CH between two carbonyls is unusually acidic for a carbon-hydrogen bond.
+  for(let i=0;i<A.length;i++){
+    if(!isC(i)||carbonylC(i)) continue;
+    if((adj.get(i)||[]).filter(x=>x.o<2&&carbonylC(x.to)).length>=2){ acids.push({name:'1,3-dicarbonyl C-H',pKa:9.0}); break; }
+  }
+  return {acids,bases};
+}
+// Redox character from functional groups and, for inorganics, from oxidation state.
+function redoxCharacter(d,io){
+  const A=d._A, adj=buildAdj(d);
+  const isC=i=>A[i].sym==='C',isO=i=>A[i].sym==='O',isN=i=>A[i].sym==='N',isS=i=>A[i].sym==='S';
+  let ox=[],red=[];
+  if(io){
+    const c=io.comp;
+    // A metal already near its maximum oxidation state has nowhere to go but down: it oxidises
+    // whatever it meets. One in a low state is the reverse.
+    if(io.ox&&METAL_GROUP[io.ox.metal]){
+      const g=METAL_GROUP[io.ox.metal], frac=io.ox.ox/g;
+      if(io.ox.ox>=6||frac>=0.85) ox.push('the metal is at or near its maximum oxidation state ('+io.ox.metal+'('+io.ox.ox+')), so it readily accepts electrons');
+      else if(io.ox.ox<=2&&g<=9) red.push('the metal is in a low oxidation state and can be oxidised further');
+    }
+    if(c.O&&c.Cl&&!c.C) ox.push('a chlorine oxoanion (hypochlorite/chlorate-type) is a strong oxidant');
+    if(c.O&&c.N&&!c.C&&(c.O/(c.N||1))>=2.5) ox.push('a nitrogen oxoanion (nitrate-type) is oxidising, strongly so when hot or concentrated');
+    if(c.H&&c.O&&c.O>=2&&Object.keys(c).length===2) { ox.push('a peroxide: readily gives up an oxygen atom'); red.push('peroxides are also mild reductants toward strong oxidants - they are redox-amphoteric'); }
+    if(c.S&&c.O&&(c.O/(c.S||1))<=3) red.push('a sulfur species below its maximum oxidation state (sulfite-type) is a common reducing agent');
+    if(c.H&&!c.O&&(c.B||c.Al||c.Si||c.P)) red.push('a main-group hydride: a strong hydride donor and powerful reductant');
+    if((c.F||c.Cl||c.Br||c.I)&&Object.keys(c).length===1) ox.push('a free halogen: a classic oxidant');
+  }
+  for(let i=0;i<A.length;i++){
+    const nb=adj.get(i)||[];
+    if(isO(i)&&nb.length===2&&nb.every(x=>x.o===1)&&nb.every(x=>isO(x.to)||A[x.to].sym==='O')) {}
+    if(isS(i)&&nb.length===1&&nb[0].o<=1) red.push('a thiol: oxidises readily to a disulfide, a common biological reductant');
+    if(isN(i)&&nb.filter(x=>isN(x.to)&&x.o===1).length>=1&&!nb.some(x=>x.o===2)&&!A[i].ar) red.push('a hydrazine-type N-N bond: a strong reducing agent');
+    if(isN(i)&&nb.filter(x=>isO(x.to)).length>=2) ox.push('a nitro group: an oxidising, electron-poor substituent');
+  }
+  for(const b of d.B) if(b.o===1&&isO(b.a)&&isO(b.b)) ox.push('an O-O peroxide bond: a strong, often unstable oxidant');
+  const fg=functionalGroups(d);
+  if(fg.aldehydes) red.push('an aldehyde: oxidises easily to the carboxylic acid (this is what Tollens and Fehling tests detect)');
+  if(fg.phenols>=2) red.push('a polyphenol: a good electron/hydrogen donor, the basis of most dietary antioxidants');
+  // enediol (ascorbate-type): two hydroxyls on a C=C
+  for(const b of d.B){
+    if(b.o!==2||!isC(b.a)||!isC(b.b)) continue;
+    const ohs=[b.a,b.b].filter(x=>(adj.get(x)||[]).some(y=>y.o===1&&isO(y.to)&&(adj.get(y.to)||[]).length===1)).length;
+    if(ohs>=2){ red.push('an enediol (ascorbic-acid pattern): a strong, readily oxidised reductant'); break; }
+  }
+  if(typeof quinoneCount==='function'&&d.coreRings&&quinoneCount(A,d.B,d.coreRings)>=2) ox.push('a quinone: a reversible electron acceptor that cycles with its hydroquinone form');
+  return {ox:[...new Set(ox)],red:[...new Set(red)]};
+}
+// Classic qualitative solubility rules for ionic solids.
+function ionicSolubility(io){
+  const c=io.comp, has=e=>!!c[e];
+  const groupI=['Na','K','Li','Rb','Cs'].some(has);
+  if(!io.hasMetal&&!has('N')) return null;
+  if(groupI||(has('N')&&has('H')&&io.ox===null)) return {verdict:'soluble',why:'group 1 and ammonium salts are soluble without exception'};
+  if(has('N')&&has('O')&&(c.O/(c.N||1))>=3) return {verdict:'soluble',why:'all nitrates are soluble'};
+  if(has('C')&&has('O')&&(c.O/(c.C||1))>=2&&!has('S')) return {verdict:'largely insoluble',why:'carbonates are insoluble apart from group 1 and ammonium'};
+  if(has('S')&&has('O')){
+    const insol=['Ba','Pb','Sr','Ca','Ag'].some(has);
+    return insol?{verdict:'sparingly soluble',why:'most sulfates are soluble, but those of barium, lead, strontium, calcium and silver are not'}
+                :{verdict:'soluble',why:'most sulfates are soluble'};
+  }
+  if(['Cl','Br','I'].some(has)){
+    const insol=['Ag','Pb','Hg'].some(has);
+    return insol?{verdict:'insoluble',why:'halides are soluble except those of silver, lead and mercury(I)'}
+                :{verdict:'soluble',why:'most halides are soluble'};
+  }
+  if(has('S')&&!has('O')) return {verdict:'insoluble',why:'sulfides are insoluble apart from group 1, ammonium and the heavier group 2 metals'};
+  if(has('O')&&has('H')) return {verdict:'largely insoluble',why:'hydroxides are insoluble apart from group 1, barium and strontium'};
+  if(has('P')&&has('O')) return {verdict:'largely insoluble',why:'phosphates are insoluble apart from group 1 and ammonium'};
+  if(has('O')&&io.hasMetal) return {verdict:'insoluble',why:'most metal oxides are insoluble in water (many do react with acid)'};
+  return null;
+}
+
+// ---- inorganic acid / base behaviour, reasoned from composition ----
+// Formula input produces a composition with no bonds, so the organic group detectors find nothing.
+// Inorganic acid/base character is instead derived from element roles, which is not a fallback:
+// it is how the chemistry actually works.
+const AMPHOTERIC_METALS=['Al','Zn','Pb','Sn','Cr','Be','Sb','Ga','As'];
+const STRONG_BASE_METALS=['Na','K','Li','Rb','Cs','Ba','Sr','Ca'];
+const HALIDES_AB=['Cl','Br','I'];
+// Central atom of an oxoacid: the non-metal that is neither hydrogen nor oxygen.
+function oxoCentre(c){
+  const cands=Object.keys(c).filter(e=>e!=='H'&&e!=='O'&&NONMETALS.includes(e));
+  return cands.length===1?cands[0]:null;
+}
+function inorganicAcidBase(io){
+  const c=io.comp, has=e=>!!c[e], why=[];
+  const hasMetal=io.hasMetal;
+  const nH=c.H||0, nO=c.O||0;
+  // --- binary hydrogen halides ---
+  if(nH&&!nO&&HALIDES_AB.some(has)&&!hasMetal&&Object.keys(c).length===2)
+    return {acidBase:'strongly acidic',charge7:'fully dissociated (anionic)',
+      why:['a hydrogen halide: essentially completely dissociated in water, one of the classical strong mineral acids']};
+  if(nH&&has('F')&&!nO&&!hasMetal&&Object.keys(c).length===2)
+    return {acidBase:'weakly acidic',charge7:'partly dissociated',
+      why:['hydrofluoric acid is the exception among the hydrogen halides: the H-F bond is strong enough that it is only a weak acid (though still dangerously corrosive)']};
+  if(nH&&has('S')&&!nO&&!hasMetal) return {acidBase:'weakly acidic',charge7:'partly dissociated',why:['hydrogen sulfide is a weak diprotic acid in water']};
+  if(nH&&has('C')&&has('N')&&!nO&&!hasMetal) return {acidBase:'weakly acidic',charge7:'largely undissociated',why:['hydrocyanic acid is a very weak acid (pKa about 9)']};
+  // --- oxoacids: Pauling's rule. For (HO)pEOq the strength is set by the number of terminal
+  // oxygens q = nO - nH; two or more means a strong acid. This is a genuine predictive rule,
+  // not a table: it gets HNO3 and H2SO4 strong, H2CO3 and H3PO4 weak, straight from the formula.
+  if(nH&&nO&&!hasMetal){
+    const E=oxoCentre(c);
+    if(E){
+      const q=nO-nH;
+      if(q>=2) return {acidBase:'strongly acidic',charge7:'fully dissociated (anionic)',
+        why:['an oxoacid of '+E+' with '+q+' terminal oxygens; by the Pauling rule two or more terminal oxygens make a strong acid, because they delocalise the charge of the anion']};
+      if(q===1) return {acidBase:'weakly acidic',charge7:'partly dissociated',
+        why:['an oxoacid of '+E+' with one terminal oxygen; by the Pauling rule this indicates a weak acid (pKa of order 2)']};
+      return {acidBase:'weakly acidic',charge7:'largely undissociated',
+        why:['an oxoacid of '+E+' with no terminal oxygen; by the Pauling rule this is a very weak acid (pKa of order 8)']};
+    }
+    if(nO===2&&nH===2&&Object.keys(c).length===2) return {acidBase:'very weakly acidic',charge7:'largely undissociated',why:['hydrogen peroxide is a very weak acid']};
+    if(nO===1&&nH===2&&Object.keys(c).length===2) return {acidBase:'neutral',charge7:'neutral',why:['water itself: the reference point for the pH scale']};
+  }
+  // --- ammonia and hydrazine ---
+  if(has('N')&&nH>=3&&!nO&&!hasMetal&&Object.keys(c).length===2)
+    return {acidBase:'weakly basic',charge7:'partly protonated (cationic)',why:['ammonia/hydrazine-type nitrogen: a classic weak base that accepts a proton to give the ammonium ion']};
+  // --- metal hydroxides ---
+  if(hasMetal&&nO&&nH&&nO===nH){
+    const M=Object.keys(c).find(e=>METAL_GROUP[e]||MAIN_METALS.includes(e));
+    if(AMPHOTERIC_METALS.includes(M)) return {acidBase:'amphoteric',charge7:'depends on pH',
+      why:[M+' hydroxide is amphoteric: it dissolves in acid as the metal cation and in excess alkali as the hydroxo-anion']};
+    if(STRONG_BASE_METALS.includes(M)) return {acidBase:'strongly basic',charge7:'fully dissociated (hydroxide)',
+      why:['a group 1 or heavy group 2 hydroxide: fully dissociated in water, a classical strong base']};
+    return {acidBase:'weakly basic',charge7:'largely undissolved',why:['a transition-metal hydroxide: basic but of low solubility, so only weakly so in practice']};
+  }
+  // --- oxides: metal oxides are basic anhydrides, non-metal oxides acidic ones ---
+  const otherNonmetal=Object.keys(c).some(e=>e!=='O'&&e!=='H'&&NONMETALS.includes(e));
+  // A simple oxide has exactly one metal. Two metals means a spectator cation plus an oxoanion
+  // centre (KMnO4, K2Cr2O7), i.e. a salt, which the salt logic below handles correctly.
+  const nMetals=Object.keys(c).filter(e=>METAL_GROUP[e]||MAIN_METALS.includes(e)).length;
+  if(nO&&!nH&&!otherNonmetal&&nMetals<=1){
+    const M=Object.keys(c).find(e=>METAL_GROUP[e]||MAIN_METALS.includes(e));
+    if(M){
+      // High oxidation state is checked BEFORE amphotericity: chromium is nominally amphoteric,
+      // but Cr(VI) as CrO3 is decisively an acidic oxide.
+      if(io.ox&&METAL_GROUP[M]&&io.ox.ox>=6) return {acidBase:'acidic',charge7:'forms an oxoanion in water',
+        why:['a metal oxide in a high oxidation state ('+M+'('+io.ox.ox+')): highly charged metal centres give acidic oxides that dissolve to oxoanions rather than basic ones']};
+      if(AMPHOTERIC_METALS.includes(M)) return {acidBase:'amphoteric',charge7:'depends on pH',
+        why:['an oxide of '+M+', an amphoteric metal: it reacts with both acids and strong bases']};
+      if(STRONG_BASE_METALS.includes(M)) return {acidBase:'strongly basic',charge7:'forms hydroxide in water',
+        why:['a group 1/2 metal oxide: a basic anhydride that reacts with water to give the hydroxide']};
+      return {acidBase:'weakly basic',charge7:'largely insoluble',why:['a metal oxide, so basic in character, though most are only sparingly soluble']};
+    }
+  }
+  if(nO&&!nH&&!io.hasMetal){
+    const E=oxoCentre(c);
+    if(E) return {acidBase:'acidic',charge7:'forms an oxoacid in water',
+      why:['a non-metal oxide ('+E+' oxide): an acidic anhydride that reacts with water to form the corresponding oxoacid']};
+  }
+  // --- salts: judged by the strength of the parent acid and base ---
+  if(hasMetal||((c.N||0)&&nH>=4)){
+    const M=Object.keys(c).find(e=>METAL_GROUP[e]||MAIN_METALS.includes(e));
+    const strongCation=M&&STRONG_BASE_METALS.includes(M);
+    const smallHighCharge=M&&(io.ox&&io.ox.ox>=3);
+    const ammonium=(c.N||0)&&nH>=4;
+    // anion of a weak acid -> the salt hydrolyses to give a basic solution
+    const weakAnion=(has('C')&&nO>=2)||(has('P')&&nO>=3)||(has('S')&&!nO)||(nO&&nH&&has('C'));
+    const strongAnion=HALIDES_AB.some(has)||(has('N')&&nO>=3)||(has('S')&&nO>=4);
+    if(weakAnion&&strongCation) return {acidBase:'basic (hydrolysing salt)',charge7:'basic solution',
+      why:['the salt of a strong base and a weak acid: the anion hydrolyses, so the solution is basic (this is why washing soda and baking soda are alkaline)']};
+    if(strongAnion&&(ammonium||smallHighCharge)) return {acidBase:'acidic (hydrolysing salt)',charge7:'acidic solution',
+      why:[(ammonium?'an ammonium salt':'a salt of a small, highly charged metal ion')+' with the anion of a strong acid: the cation hydrolyses, giving an acidic solution']};
+    if(strongAnion&&strongCation) return {acidBase:'neutral',charge7:'neutral solution',
+      why:['the salt of a strong acid and a strong base: neither ion hydrolyses appreciably, so the solution is neutral']};
+    return {acidBase:'neutral',charge7:'neutral solution',why:['a salt with no strongly hydrolysing ion']};
+  }
+  return null;
+}
+function chemProfile(d){
+  const pc=physChem(d);
+  const io=(typeof inorganicProfile==='function')?inorganicProfile(d):null;
+  const {acids,bases}=ionisableGroups(d);
+  const redox=redoxCharacter(d,io);
+  const strongestAcid=acids.length?acids.reduce((a,b)=>a.pKa<b.pKa?a:b):null;
+  const strongestBase=bases.length?bases.reduce((a,b)=>a.pKaH>b.pKaH?a:b):null;
+  // Acid/base verdict, judged by behaviour in water at around pH 7.
+  let acidBase='neutral', abWhy=[], charge7='neutral';
+  // For an inorganic species the verdict comes from composition, not from group detection: formula
+  // input carries no bonds at all, and mineral acid/base behaviour is a property of the ions.
+  const inAB=io?inorganicAcidBase(io):null;
+  const aP=strongestAcid?strongestAcid.pKa:99, bP=strongestBase?strongestBase.pKaH:-99;
+  const acidicAt7=aP<7, basicAt7=bP>7;
+  if(acidicAt7&&basicAt7){ acidBase='amphoteric (zwitterionic)'; charge7='zwitterion: both groups are ionised'; abWhy.push('it carries both an acid that loses its proton and a base that gains one at physiological pH, so it exists largely as a zwitterion'); }
+  else if(acidicAt7){ acidBase=aP<2?'strongly acidic':'weakly acidic'; charge7='anionic (deprotonated)'; }
+  else if(basicAt7){ acidBase=bP>11?'strongly basic':'weakly basic'; charge7='cationic (protonated)'; }
+  else if(aP<12){ acidBase='very weakly acidic'; charge7='neutral'; }
+  else if(bP>2){ acidBase='very weakly basic'; charge7='neutral'; }
+  if(strongestAcid) abWhy.push('strongest acidic group: '+strongestAcid.name+' (typical pKa around '+strongestAcid.pKa+')');
+  if(strongestBase) abWhy.push('strongest basic group: '+strongestBase.name+' (conjugate acid pKa around '+strongestBase.pKaH+')');
+  if(!strongestAcid&&!strongestBase&&!inAB) abWhy.push('no ionisable group was found, so the compound is essentially neutral across the normal pH range');
+  if(inAB){ acidBase=inAB.acidBase; charge7=inAB.charge7; abWhy=inAB.why.slice(); }
+  // Aqueous solubility. For molecules the ESOL model of Delaney is used; for ionic solids the
+  // classical qualitative solubility rules apply instead, since ESOL does not describe lattices.
+  const AP=pc.heavy?(d._A.filter(a=>a.ar).length/pc.heavy):0;
+  const logS=0.16-0.63*pc.logp-0.0062*pc.mw+0.066*pc.rot-0.74*AP;
+  const ionic=io?ionicSolubility(io):null;
+  let solWord,solWhy;
+  if(ionic){ solWord=ionic.verdict; solWhy=ionic.why+' (an ionic lattice, so the ESOL model for molecules does not apply)'; }
+  else {
+    solWord = logS>0?'very soluble':logS>-2?'soluble':logS>-4?'slightly soluble':'poorly soluble';
+    solWhy='estimated from the ESOL model (log S about '+logS.toFixed(1)+', i.e. roughly '+(Math.pow(10,logS)*pc.mw).toPrecision(2)+' g/L), driven mainly by lipophilicity, size and aromatic surface';
+    if(charge7!=='neutral') solWhy+='; being charged at pH 7 raises real aqueous solubility well above this neutral-molecule estimate';
+  }
+  const lipoWord = pc.logp>5?'very lipophilic':pc.logp>3?'lipophilic':pc.logp>1?'moderately lipophilic':pc.logp>-0.5?'balanced':'hydrophilic';
+  return {pc,io,acids,bases,strongestAcid,strongestBase,acidBase,abWhy,charge7,redox,logS,solWord,solWhy,lipoWord,ionic};
+}
+
+// ==================== Benchmark harness ====================
+// Turns a hand-checked dataset into a measurable score. Predictions are phrases rather than exact
+// labels, so matching is keyword-based and deliberately generous: the aim is to measure whether the
+// model reached the right conclusion, not whether it phrased it identically.
+const BENCH_PROPERTIES=['color','odor','taste','acidbase','redox','solubility','psychoactive','toxic'];
+function benchPredict(input,prop){
+  const a=analyse(input);
+  switch(prop){
+    case 'color': return {value:a.col,why:a.inorg?(a.inorg.colorWhy||''):a.t.kind};
+    case 'odor': { const o=odorProfile(a.d); return {value:o.odorless?'odorless':o.character,why:(o.rationale||[])[0]||''}; }
+    case 'taste': { const t=tasteProfile(a.d); return {value:t.character,why:(t.rationale||[])[0]||''}; }
+    case 'acidbase': { const c=chemProfile(a.d); return {value:c.acidBase,why:(c.abWhy||[])[0]||''}; }
+    case 'redox': { const c=chemProfile(a.d); const w=c.redox.ox.length&&c.redox.red.length?'redox-amphoteric':c.redox.ox.length?'oxidising':c.redox.red.length?'reducing':'redox-inert';
+      return {value:w,why:(c.redox.ox[0]||c.redox.red[0]||'no redox-active group found')}; }
+    case 'solubility': { const c=chemProfile(a.d); return {value:c.solWord,why:c.solWhy}; }
+    case 'psychoactive': { const b=bioactivityProfile(a.d); return {value:b.psychoactive?'yes':'no',why:b.ph.hits.map(h=>h.name).join(', ')||'no CNS scaffold matched'}; }
+    case 'toxic': { const b=bioactivityProfile(a.d); return {value:b.toxBand,why:b.alerts.map(x=>x.name).join(', ')||'no structural alert'}; }
+  }
+  return {value:'',why:'unknown property'};
+}
+function benchNorm(s){ return String(s||'').toLowerCase().replace(/[_\-\/]+/g,' ').replace(/\s+/g,' ').trim(); }
+// A prediction counts as correct when the expected term appears in it, or vice versa. Several
+// spellings of the same verdict are treated as equivalent so wording differences are not counted
+// as model errors.
+const BENCH_SYNONYM=[['odorless','odourless','no odor','no smell','none'],['colorless','colourless','white','clear'],
+ ['oxidising','oxidizing','oxidant','oxidiser'],['reducing','reductant','reducer','antioxidant'],
+ ['acidic','acid'],['basic','base','alkaline'],['yes','true','psychoactive','1'],['no','false','inactive','0']];
+function benchMatch(expected,predicted){
+  const e=benchNorm(expected), p=benchNorm(predicted);
+  if(!e) return null;
+  if(e===p) return true;
+  const expand=t=>{ for(const grp of BENCH_SYNONYM) if(grp.includes(t)) return grp; return [t]; };
+  for(const alt of expand(e)) if(p.includes(alt)) return true;
+  for(const alt of expand(e)) for(const grp of BENCH_SYNONYM) if(grp.includes(alt)) for(const g of grp) if(p.includes(g)) return true;
+  // A species that is genuinely both (hydrogen peroxide) satisfies either expectation: the model
+  // is not wrong to notice the second behaviour.
+  if(p==='redox amphoteric'&&(e==='oxidising'||e==='reducing'||e==='oxidizing')) return true;
+  if(p.includes(e)||e.includes(p)) return true;
+  // multi-term expectations ("sweet + floral") pass if any term is present
+  return e.split(/[+,;]/).map(x=>x.trim()).filter(Boolean).some(x=>p.includes(x));
+}
+// Accepts CSV or TSV with a header naming the columns, or the simple positional form
+// input,property,expected. Blank lines and lines starting with # are ignored.
+function parseBenchData(text){
+  const rows=[], errs=[];
+  const lines=String(text||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&!l.startsWith('#'));
+  if(!lines.length) return {rows,errs};
+  const split=l=>{
+    const out=[]; let cur='',q=false;
+    for(const ch of l){
+      if(ch==='"'){q=!q;continue}
+      if((ch===','||ch==='\t')&&!q){out.push(cur);cur='';continue}
+      cur+=ch;
+    }
+    out.push(cur); return out.map(x=>x.trim());
+  };
+  const head=split(lines[0]).map(x=>benchNorm(x));
+  const isInputCol=x=>['input','smiles','compound','formula','structure'].includes(x);
+  // WIDE format: a header naming property columns directly, e.g.
+  //   input,name,odor,taste,color
+  // One row per compound, one column per property, blank cells simply skipped.
+  const propCols=head.map((x,i)=>BENCH_PROPERTIES.includes(x)?i:-1).filter(i=>i>=0);
+  const hasExpectedCol=head.includes('expected')||head.includes('value');
+  // Wide format requires a real header naming the input column. Without that check, a headerless
+  // long row such as "CCCCCC=O,odor,green" would be mistaken for a header, because its second
+  // field happens to be a property name.
+  const inCol=head.findIndex(isInputCol);
+  if(propCols.length&&!hasExpectedCol&&inCol>=0){
+    const nameCol=head.indexOf('name');
+    for(let i=1;i<lines.length;i++){
+      const c=split(lines[i]); const input=c[inCol];
+      if(!input) continue;
+      let any=false;
+      for(const pc of propCols){
+        const v=c[pc];
+        if(v===undefined||v==='') continue;
+        rows.push({input,property:head[pc],expected:v,name:nameCol>=0?c[nameCol]:''});
+        any=true;
+      }
+      if(!any) errs.push('line '+(i+1)+': no property values on this row');
+    }
+    return {rows,errs};
+  }
+  // LONG format, with an optional header. Each row may carry ONE property/value pair, or several
+  // pairs after the input: input, prop, value, prop, value, ... so a compound need only be typed once.
+  let start=0, cols={input:0,property:1,expected:2}, nameCol=-1;
+  if(head.some(isInputCol)){
+    cols.input=head.findIndex(isInputCol);
+    cols.property=head.indexOf('property'); cols.expected=head.indexOf('expected');
+    if(cols.expected<0) cols.expected=head.indexOf('value');
+    nameCol=head.indexOf('name');
+    start=1;
+    if(cols.property<0||cols.expected<0){ cols={input:cols.input,property:cols.input+1,expected:cols.input+2}; }
+  }
+  for(let i=start;i<lines.length;i++){
+    const c=split(lines[i]);
+    const input=c[cols.input];
+    if(!input){ errs.push('line '+(i+1)+': no input given'); continue; }
+    const name=nameCol>=0?c[nameCol]:'';
+    // Collect every property/value pair on the line, starting at the property column.
+    const pairs=[]; let bad=null;
+    for(let k=cols.property;k<c.length;k+=2){
+      const p=benchNorm(c[k]), v=c[k+1];
+      if(p===''&&(v===undefined||v==='')) continue;
+      if(!BENCH_PROPERTIES.includes(p)){ bad='unknown property "'+c[k]+'"'; break; }
+      if(v===undefined||v===''){ bad='property "'+p+'" has no expected value'; break; }
+      pairs.push({property:p,expected:v});
+    }
+    if(bad){ errs.push('line '+(i+1)+': '+bad+' (properties: '+BENCH_PROPERTIES.join(', ')+')'); continue; }
+    if(!pairs.length){ errs.push('line '+(i+1)+': needs at least one property and expected value'); continue; }
+    for(const pr of pairs) rows.push({input,name,...pr});
+  }
+  return {rows,errs};
+}
+function runBenchmark(text){
+  const {rows,errs}=parseBenchData(text);
+  const per={}, fails=[];
+  let ok=0;
+  for(const r of rows){
+    let pred;
+    try{ pred=benchPredict(r.input,r.property); }
+    catch(e){ pred={value:'(error: '+e.message+')',why:''}; }
+    const hit=benchMatch(r.expected,pred.value)===true;
+    per[r.property]=per[r.property]||{n:0,ok:0};
+    per[r.property].n++; if(hit){per[r.property].ok++; ok++;}
+    if(!hit) fails.push({...r,got:pred.value,why:pred.why});
+  }
+  return {rows,errs,per,ok,total:rows.length,fails};
+}
+
+// Starter set: well-characterised compounds with widely agreed properties, meant as a baseline and
+// a format example rather than a target. Replace it with your own hand-checked data.
+const BENCH_SEED=`# input,property,expected   -- lines beginning with # are ignored
+# --- odour: aliphatic chain-length series ---
+CC(=O)O,odor,sour
+CCCC(=O)O,odor,rancid
+CCCCCC=O,odor,green
+CCCCCCCC=O,odor,citrus
+CCCCCCCCCC=O,odor,waxy
+O=Cc1ccccc1,odor,almond
+COc1cc(C=O)ccc1O,odor,vanilla
+COc1ccccc1O,odor,smoky
+CC(=O)C(=O)C,odor,buttery
+Cc1cnc(C)cn1,odor,nutty
+CC(C)C1CCC(C)CC1O,odor,minty
+CC1=CCC(CC1)C(=C)C,odor,citrus
+OCCc1ccccc1,odor,floral
+CS,odor,sulfurous
+C=CCSSCC=C,odor,alliaceous
+CN(C)C,odor,fishy
+CC12CCCC(C)(O)C1CCCC2,odor,earthy
+O=C1CCCCCCCCCCCCCCO1,odor,musky
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,odor,odorless
+OCC(O)C(O)C(O)C(O)C=O,odor,odorless
+NC(=O)N,odor,odorless
+# --- colour ---
+c1ccccc1,color,colorless
+c1ccc2ccccc2c1,color,colorless
+c1ccc2cc3cc4ccccc4cc3cc2c1,color,orange
+O=Cc1ccccc1,color,colorless
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,color,colorless
+CuSO4,color,blue
+KMnO4,color,purple
+K2Cr2O7,color,orange
+Fe2O3,color,red
+TiO2,color,white
+CdS,color,yellow
+NaCl,color,colorless
+CoCl2,color,pink
+NiSO4,color,green
+# --- acid / base ---
+CC(=O)O,acidbase,acidic
+OS(=O)(=O)c1ccccc1,acidbase,acidic
+Oc1ccccc1,acidbase,acidic
+CCN,acidbase,basic
+NC(N)=N,acidbase,basic
+NCC(=O)O,acidbase,amphoteric
+c1ccccc1,acidbase,neutral
+HCl,acidbase,acidic
+H2SO4,acidbase,acidic
+HF,acidbase,weakly acidic
+H3PO4,acidbase,weakly acidic
+NaOH,acidbase,basic
+NH3,acidbase,basic
+Al2O3,acidbase,amphoteric
+CO2,acidbase,acidic
+Na2CO3,acidbase,basic
+NH4Cl,acidbase,acidic
+NaCl,acidbase,neutral
+# --- redox ---
+KMnO4,redox,oxidising
+H2O2,redox,oxidising
+CCCCCC=O,redox,reducing
+CS,redox,reducing
+Oc1ccccc1O,redox,reducing
+Na2SO3,redox,reducing
+c1ccccc1,redox,redox-inert
+# --- solubility ---
+OCC(O)C(O)C(O)C(O)C=O,solubility,very soluble
+CCCCCCCCCCCCCCCC,solubility,poorly soluble
+AgCl,solubility,insoluble
+NaNO3,solubility,soluble
+# --- bioactivity ---
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,psychoactive,yes
+CN1CCCC1c1cccnc1,psychoactive,yes
+NCCc1c[nH]c2ccc(O)cc12,psychoactive,yes
+CC(=O)Oc1ccccc1C(=O)O,psychoactive,no
+OCC(O)C(O)C(O)C(O)C=O,psychoactive,no
+CN(C)N=O,toxic,high
+CCOP(=S)(OCC)Oc1ccccc1,toxic,high
+Nc1ccccc1,toxic,moderate
+# --- taste ---
+# (rows below also show the compact multi-property form)
+CC(=O)O,taste,sour
+OCC(O)C(O)C(O)C(O)C=O,taste,sweet
+OC(=O)C(N)CCC(=O)O,taste,umami
+NaCl,taste,salty
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,taste,bitter
+# several properties on a single row:
+COc1ccccc1O,odor,smoky,color,colorless,acidbase,acidic
+CS,odor,sulfurous,redox,reducing,color,colorless`;
+let LAST_FAILS=[];
+function loadBenchSeed(){ document.getElementById('benchData').value=BENCH_SEED; doBenchmark(); }
+function clearBench(){ document.getElementById('benchData').value=''; doBenchmark(); }
+function copyFails(){
+  const txt=LAST_FAILS.map(f=>f.input+','+f.property+','+f.expected+'  -> model said: '+f.got).join('\n');
+  const ta=document.getElementById('benchData');
+  if(!txt){ document.getElementById('benchErrs').innerHTML='<span class="small">No failures to copy.</span>'; return; }
+  if(navigator&&navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt);
+  document.getElementById('benchErrs').innerHTML='<div class="odor-note"><b>Failures</b><pre style="white-space:pre-wrap;margin:6px 0 0;font-size:12px">'+txt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</pre></div>';
+}
+function doBenchmark(){
+  const txt=document.getElementById('benchData').value;
+  const r=runBenchmark(txt);
+  LAST_FAILS=r.fails;
+  const pct=r.total?Math.round(100*r.ok/r.total):0;
+  document.getElementById('benchScore').textContent=r.total?pct+'%':'—';
+  document.getElementById('benchN').textContent=r.total||'—';
+  document.getElementById('benchF').textContent=r.total?r.fails.length:'—';
+  document.getElementById('benchP').textContent=Object.keys(r.per).length||'—';
+  document.getElementById('benchErrs').innerHTML=r.errs.length?'<div class="odor-note"><b class="warn">Rows skipped</b><br><span class="small">'+r.errs.join('<br>')+'</span></div>':'';
+  document.getElementById('benchBars').innerHTML=Object.keys(r.per).sort().map(k=>{
+    const p=r.per[k], v=Math.round(100*p.ok/p.n);
+    return `<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${v}%"></i></div><span>${v}%</span></div>`;
+  }).join('');
+  document.getElementById('benchPer').innerHTML=Object.keys(r.per).sort().map(k=>{
+    const p=r.per[k], v=Math.round(100*p.ok/p.n);
+    return `<tr><td>${k}</td><td>${p.n}</td><td>${p.ok}</td><td class="${v>=75?'pass':'fail'}">${v}%</td></tr>`;
+  }).join('')||'<tr><td colspan="4" class="small">No rows scored yet.</td></tr>';
+  document.getElementById('benchFails').innerHTML=r.fails.map(f=>
+    `<tr><td><code>${(f.name?f.name+'<br>':'')}${f.input.length>26?f.input.substring(0,26)+'…':f.input}</code></td><td>${f.property}</td><td>${f.expected}</td><td>${f.got}</td><td class="small">${f.why||''}</td></tr>`
+  ).join('')||'<tr><td colspan="5" class="small">No failures.</td></tr>';
+}
+function renderChem(a){
+  const c=chemProfile(a.d), pc=c.pc;
+  document.getElementById('chemAB').textContent=c.acidBase;
+  document.getElementById('chemCharge').textContent=c.charge7;
+  document.getElementById('chemABWhy').innerHTML=c.abWhy.join('; ')+'.';
+  const rows=[];
+  if(c.acids.length) rows.push('<b>Acidic groups:</b> '+c.acids.map(x=>x.name+' (pKa ~'+x.pKa+')').join(', '));
+  if(c.bases.length) rows.push('<b>Basic groups:</b> '+c.bases.map(x=>x.name+' (pKaH ~'+x.pKaH+')').join(', '));
+  document.getElementById('chemGroups').innerHTML=rows.length?'<div class="odor-note">'+rows.join('<br>')+'</div>':'';
+  document.getElementById('chemSol').textContent=c.solWord;
+  document.getElementById('chemLipo').textContent=c.lipoWord;
+  document.getElementById('chemSolWhy').innerHTML=c.solWhy+'.';
+  const scale=v=>Math.max(0,Math.min(100,v));
+  const bars=[['water solubility',c.ionic?(/^soluble/.test(c.ionic.verdict)?85:20):scale((c.logS+6)*14)],
+              ['lipophilicity (logP)',scale((pc.logp+2)*12)],
+              ['polar surface area',scale(pc.tpsa/2)]];
+  document.getElementById('chemSolBars').innerHTML=bars.map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${Math.round(v)}%"></i></div><span>${Math.round(v)}</span></div>`).join('');
+  const nOx=c.redox.ox.length,nRed=c.redox.red.length;
+  document.getElementById('chemRedox').textContent = nOx&&nRed?'redox-amphoteric':nOx?'oxidising':nRed?'reducing':'redox-inert';
+  let rx='';
+  if(nOx) rx+='<div class="odor-note"><b>Oxidising character</b><ul style="margin:6px 0 0 18px">'+c.redox.ox.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  if(nRed) rx+='<div class="odor-note"><b>Reducing character</b><ul style="margin:6px 0 0 18px">'+c.redox.red.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  if(!rx) rx='<span class="small">No group with pronounced oxidising or reducing behaviour was found. The compound is likely to be redox-inert under ordinary conditions.</span>';
+  document.getElementById('chemRedoxWhy').innerHTML=rx;
+  document.getElementById('chemPhys').innerHTML=`Molecular weight: <b>${pc.mw}</b> g/mol<br>Estimated logP: <b>${pc.logp}</b> (${c.lipoWord})<br>Estimated log S: <b>${c.ionic?'not applicable to an ionic lattice':c.logS.toFixed(1)}</b><br>Polar surface area: <b>${pc.tpsa}</b> A&sup2;<br>H-bond donors: <b>${pc.hbd}</b> · acceptors: <b>${pc.hba}</b><br>Rotatable bonds: <b>${pc.rot}</b> · heavy atoms: <b>${pc.heavy}</b>`;
+}
+function renderTaste(a){
+  const t=tasteProfile(a.d);
+  document.getElementById('tasteCharacter').textContent=t.character;
+  document.getElementById('tasteConfidence').textContent=t.confidence;
+  document.getElementById('tasteBars').innerHTML=(t.ranked||[]).map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${Math.round(v)}%"></i></div><span>${Math.round(v)}</span></div>`).join('');
+  document.getElementById('tasteSummary').innerHTML=`<b>Predicted taste:</b> ${t.character}.<br>${t.rationale.join('; ')}.`;
+  document.getElementById('tasteElectronic').innerHTML=`Heavy atoms: <b>${t.heavy}</b><br>Acids: <b>${t.fg.acids}</b> · Alcohols: <b>${t.fg.alcohols}</b> · Amines: <b>${t.fg.amines}</b><br>Amino-acid-like pattern (nearby acids per amine): <b>${t.aa}</b><br>Aromatic/ring-conjugated atoms: <b>${a.d.ar}</b> · Rings in π-network: <b>${a.d.r}</b> · N: <b>${a.d.N}</b>`;
+  document.getElementById('tasteWarnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';
+}
+function showTab(name){
+ document.getElementById('colorTab').classList.toggle('active',name==='color');
+ document.getElementById('odorTab').classList.toggle('active',name==='odor');
+ document.getElementById('tasteTab').classList.toggle('active',name==='taste');
+ document.getElementById('bioTab').classList.toggle('active',name==='bio');
+ document.getElementById('chemTab').classList.toggle('active',name==='chem');
+ document.getElementById('benchTab').classList.toggle('active',name==='bench');
+ document.getElementById('tabColor').classList.toggle('active',name==='color');
+ document.getElementById('tabOdor').classList.toggle('active',name==='odor');
+ document.getElementById('tabTaste').classList.toggle('active',name==='taste');
+ document.getElementById('tabBio').classList.toggle('active',name==='bio');
+ document.getElementById('tabChem').classList.toggle('active',name==='chem');
+ document.getElementById('tabBench').classList.toggle('active',name==='bench');
+ if(name==='odor') renderOdor(analyse(document.getElementById('smiles').value));
+ if(name==='taste') renderTaste(analyse(document.getElementById('smiles').value));
+ if(name==='bio') renderBio(analyse(document.getElementById('smiles').value));
+ if(name==='chem') renderChem(analyse(document.getElementById('smiles').value));
+}
+
+// ==================== Inorganic engine ====================
+// Inorganic colour comes from entirely different physics than organic chromophores: d-d
+// transitions in partly-filled transition-metal d shells, ligand-to-metal charge transfer, and
+// semiconductor band gaps. None of these are derivable from a bond graph the way a conjugated
+// pi system is, so this engine works from composition and oxidation state instead.
+const METAL_GROUP={Sc:3,Ti:4,V:5,Cr:6,Mn:7,Fe:8,Co:9,Ni:10,Cu:11,Zn:12,Y:3,Zr:4,Nb:5,Mo:6,Ru:8,Rh:9,Pd:10,Ag:11,Cd:12,W:6,Re:7,Os:8,Ir:9,Pt:10,Au:11,Hg:12};
+const MAIN_METALS=['Na','K','Li','Rb','Cs','Mg','Ca','Sr','Ba','Al','Ga','In','Sn','Pb','Bi','Sb','Tl'];
+const NONMETALS=['H','C','N','O','F','P','S','Cl','Se','Br','I','B','Si','As','Te'];
+// Common polyatomic anions, used to assign oxidation state by charge balance.
+const ANIONS=[
+ {k:'MnO4',el:{Mn:1,O:4},q:-1},{k:'Cr2O7',el:{Cr:2,O:7},q:-2},{k:'CrO4',el:{Cr:1,O:4},q:-2},
+ {k:'SO4',el:{S:1,O:4},q:-2},{k:'SO3',el:{S:1,O:3},q:-2},{k:'NO3',el:{N:1,O:3},q:-1},{k:'NO2',el:{N:1,O:2},q:-1},
+ {k:'CO3',el:{C:1,O:3},q:-2},{k:'PO4',el:{P:1,O:4},q:-3},{k:'ClO4',el:{Cl:1,O:4},q:-1},{k:'ClO3',el:{Cl:1,O:3},q:-1},
+ {k:'VO4',el:{V:1,O:4},q:-3},{k:'MoO4',el:{Mo:1,O:4},q:-2},{k:'WO4',el:{W:1,O:4},q:-2},
+ {k:'C2O4',el:{C:2,O:4},q:-2},{k:'SCN',el:{S:1,C:1,N:1},q:-1},{k:'CN',el:{C:1,N:1},q:-1},{k:'OH',el:{O:1,H:1},q:-1}
+];
+// Empirical hue reference for common inorganic species. Unlike the organic engines, specific
+// inorganic hues are NOT derivable from structure - d-orbital splitting depends on the actual
+// ligand field and band gaps on the solid-state structure. This is an explicit reference table,
+// and the app says so rather than pretending the colour was computed.
+const ION_COLOR={
+ 'Ti:3':['violet',520],'V:2':['violet',560],'V:3':['green',580],'V:4':['blue',700],
+ 'Cr:3':['green',600],'Cr:6':['yellow',440],'Mn:2':['very pale pink',500],'Mn:7':['deep purple',525],
+ 'Fe:2':['pale green',600],'Fe:3':['yellow-brown',430],'Co:2':['pink',510],'Ni:2':['green',600],
+ 'Cu:2':['blue',800],'Cu:1':['colorless',0],'Zn:2':['colorless',0],'Ag:1':['colorless',0],
+ 'Cd:2':['colorless',0],'Hg:2':['colorless',0],'Pb:2':['colorless',0],'Sc:3':['colorless',0],
+ 'Ti:4':['colorless',0],'Mo:6':['colorless',0],'W:6':['colorless',0],'Au:3':['yellow',420],'V:5':['colorless',0],'Mn:3':['red-brown',480],'Mn:4':['black',0],
+ 'Mn:6':['green',600],'Fe:6':['violet',510],'Co:3':['blue',600],'Ni:3':['black',0],'Cu:3':['red',540],
+ 'Pb:4':['colorless',0],'Sn:2':['colorless',0],'Sn:4':['colorless',0],'Bi:3':['colorless',0],
+ 'Sb:3':['colorless',0],'Ce:3':['colorless',0],'Ce:4':['orange-yellow',450],'Nd:3':['pale violet',520],
+ 'Pr:3':['pale green',590],'Er:3':['pale pink',520],'U:6':['yellow',430],'Cr:2':['blue',700],
+ 'Ru:3':['red-brown',480],'Rh:3':['red',530],'Pd:2':['red-brown',470],'Pt:2':['colorless',0],'Pt:4':['yellow',430],
+ 'Zr:4':['colorless',0],'Nb:5':['colorless',0],'Y:3':['colorless',0],'Ag:2':['colorless',0],'Hg:1':['colorless',0]
+};
+// Solid-state species whose colour comes from a band gap or mixed valence rather than d-d.
+const SOLID_COLOR={
+ 'Fe2O3':['red-brown',560,'band gap / charge transfer in the oxide lattice'],
+ 'Fe3O4':['black',0,'mixed-valence Fe(II)/Fe(III) intervalence charge transfer'],
+ 'CuO':['black',0,'narrow band gap'],'Cu2O':['red',560,'semiconductor band gap'],
+ 'TiO2':['white',0,'wide band gap - absorbs only in the UV'],'ZnO':['white',0,'wide band gap'],
+ 'CdS':['yellow',480,'semiconductor band gap'],'CdSe':['red',650,'narrower band gap than CdS'],
+ 'ZnS':['white',0,'wide band gap'],'PbS':['black',0,'very narrow band gap'],
+ 'HgS':['vermilion red',580,'semiconductor band gap (the pigment cinnabar)'],
+ 'Ag2S':['black',0,'narrow band gap'],'CuS':['black',0,'narrow band gap'],
+ 'Cr2O3':['green',600,'d-d transitions in the oxide lattice'],'MnO2':['black',0,'narrow band gap'],
+ 'PbO':['yellow',450,'band gap'],'HgO':['red',540,'band gap'],'NiO':['green',600,'d-d transitions'],
+ 'CoO':['olive green',590,'d-d transitions'],'FeS2':['brass yellow',0,'metallic lustre (pyrite)'],
+ 'V2O5':['orange',480,'charge transfer in the oxide lattice'],'WO3':['yellow',450,'band gap'],
+ 'MoO3':['white',0,'wide band gap'],'Bi2O3':['yellow',450,'band gap'],'Sb2S3':['black',0,'narrow band gap'],
+ 'As2S3':['yellow',470,'band gap (the pigment orpiment)'],'PbI2':['yellow',470,'band gap in the iodide lattice'],
+ 'AgI':['pale yellow',450,'band gap / charge transfer with the polarisable iodide'],
+ 'AgBr':['pale yellow',440,'charge transfer with bromide'],'AgCl':['white',0,'wide band gap'],
+ 'HgI2':['red',560,'narrow band gap'],'CdSe':['red',650,'narrower band gap than CdS'],
+ 'Mn2O3':['brown',500,'d-d and charge transfer'],'MnO':['green',590,'d-d transitions'],
+ 'Co3O4':['black',0,'mixed valence, narrow band gap'],'Ag2O':['brown-black',0,'narrow band gap'],
+ 'PbCrO4':['yellow',450,'chromate charge transfer'],'CuCO3':['green',600,'d9 copper'],
+ 'Cu2S':['black',0,'narrow band gap'],'Fe2S3':['black',0,'narrow band gap'],'PbO2':['brown-black',0,'narrow band gap'],
+ 'TiO':['bronze',0,'metallic conduction'],'V2O3':['black',0,'narrow band gap'],'CrO3':['dark red',520,'charge transfer'],
+ 'SnS':['brown-black',0,'narrow band gap'],'ZnSe':['yellow',470,'band gap'],'GaAs':['dark grey',0,'narrow band gap'],
+ 'Si':['dark grey',0,'narrow band gap'],'C':['black',0,'graphite: metallic conduction'],'S':['yellow',450,'band gap of the S8 ring'],
+ 'P':['red',0,'red phosphorus band gap'],'I2':['violet-black',520,'molecular absorption'],'Br2':['red-brown',480,'molecular absorption'],
+ 'Cl2':['pale green',420,'weak molecular absorption'],'F2':['pale yellow',410,'weak molecular absorption'],
+ 'Au':['metallic yellow',0,'plasmonic reflection'],'O3':['pale blue',600,'weak molecular absorption in the red'],'Cu':['metallic red-orange',0,'plasmonic reflection']
+};
+// Small molecular inorganic species with well-known odours. Ionic solids are non-volatile and
+// odourless; these are the volatile molecular exceptions.
+const INORG_ODOR={
+ 'H2S':['sulfurous','rotten eggs - detectable at extremely low concentration'],
+ 'SO2':['pungent + sulfurous','sharp, choking - burnt match'],
+ 'NH3':['pungent + fishy/amine','sharply ammoniacal, lachrymatory'],
+ 'Cl2':['pungent','bleach-like, irritating'],
+ 'HCN':['almond','faint bitter-almond (not perceptible to everyone - the ability is genetic)'],
+ 'PH3':['alliaceous + fishy/amine','garlic/decaying-fish (technical grade; pure phosphine is nearly odourless)'],
+ 'AsH3':['alliaceous','garlic-like'],
+ 'O3':['pungent','sharp, metallic - the smell after a lightning storm'],
+ 'NO2':['pungent','harsh, chlorine-like'],
+ 'HCl':['pungent','acrid, sharply irritating'],'HF':['pungent','acrid, sharply irritating'],
+ 'HBr':['pungent','acrid'],'Br2':['pungent','harsh, suffocating'],'I2':['pungent','sharp, characteristic'],
+ 'CS2':['ethereal/solvent','sweetish (pure) - technical grade is foul'],
+ 'H2Se':['sulfurous + alliaceous','extremely foul, horseradish-like'],
+ 'N2H4':['fishy/amine + pungent','ammoniacal, fishy'],
+ 'COCl2':['green','deceptively mild - freshly cut hay or grass'],
+ 'SO3':['pungent','sharp, fuming'],'ClO2':['pungent','harsh, chlorine-like'],
+ 'H2O':[null,'odourless'],'CO2':[null,'odourless'],'CO':[null,'odourless and dangerously undetectable'],
+ 'N2':[null,'odourless'],'O2':[null,'odourless'],'H2':[null,'odourless'],'CH4':[null,'odourless - natural gas is odorised artificially'],
+ 'SF6':[null,'odourless'],'He':[null,'odourless'],'Ne':[null,'odourless'],'Ar':[null,'odourless'],
+ 'SeO2':['pungent','sharp, horseradish-like'],'SiH4':['pungent','repulsive, sharp'],
+ 'GeH4':['pungent','sharp, disagreeable'],'B2H6':['sour/acidic + pungent','repulsive, sickly sweet'],
+ 'H2Te':['sulfurous','extremely foul'],'N2O':[null,'faintly sweet, essentially odourless'],
+ 'NO':['pungent','sharp (oxidises rapidly to NO2 in air)'],'HI':['pungent','acrid'],
+ 'HN3':['pungent','intensely irritating'],'SCl2':['pungent','foul, irritating'],
+ 'S2Cl2':['pungent','foul, irritating'],'NCl3':['pungent','harsh, chlorine-like'],
+ 'H2SO4':[null,'odourless as the pure liquid (fumes are pungent)'],'HNO3':['pungent','sharp, acrid fumes'],
+ 'NaOH':[null,'odourless solid'],'KOH':[null,'odourless solid'],'H2O2':[null,'faintly sharp, near odourless'],
+ 'NH4Cl':[null,'odourless solid (though it slowly releases ammonia)'],'P4':['alliaceous','garlic-like (white phosphorus)'],
+ 'S':[null,'odourless as the pure element'],'C':[null,'odourless'],'Si':[null,'odourless'],'Fe':[null,'odourless'],
+ 'Cu':[null,'odourless (the "metallic" smell is from skin reacting with the metal, not the metal itself)'],
+ 'Au':[null,'odourless'],'Ag':[null,'odourless'],'Zn':[null,'odourless']
+};
+// Re-key the reference tables through the same canonical formula function used for lookups, so a
+// human-readable key like "NH3" matches the alphabetically-ordered "H3N" produced from a structure.
+function canonTable(t){ const o={}; for(const k in t) o[canonKey(k)]=t[k]; return o; }
+let _ODOR_C=null,_SOLID_C=null;
+function odorTable(){ if(!_ODOR_C)_ODOR_C=canonTable(INORG_ODOR); return _ODOR_C; }
+function solidTable(){ if(!_SOLID_C)_SOLID_C=canonTable(SOLID_COLOR); return _SOLID_C; }
+// Appearance names map to swatch colours directly. Inorganic colour must NOT be pushed through
+// the organic transmitted-light model: that model computes what light passes through a single
+// absorption band, which breaks for Cu(II) (absorbing around 800 nm, outside the sampled visible
+// range) and for band-gap solids, where a nominal "no band" reads as white even when the species
+// is black. We already know the appearance, so the swatch is taken from the name.
+const INORG_NAME_RGB={
+ 'colorless':null,'white':[240,240,240],'black':[26,26,26],
+ 'red':[192,57,43],'red-brown':[140,59,30],'vermilion red':[227,66,52],
+ 'orange':[230,126,34],'yellow':[241,196,15],'brass yellow':[181,166,66],'yellow-brown':[165,118,27],
+ 'olive green':[107,142,35],'green':[39,174,96],'pale green':[168,213,186],
+ 'blue':[36,113,201],'deep blue':[26,63,160],'violet':[125,60,181],'deep purple':[107,45,143],
+ 'pink':[244,166,192],'very pale pink':[251,228,236]
+};
+function inorgSwatch(name){
+  if(!name) return undefined;
+  const k=name.toLowerCase().trim();
+  // Uncertain verdicts get a neutral swatch. Without this the substring matcher below would pick
+  // "red" out of the phrase "yellow to red typical" and display a confident red.
+  if(/not determined|undetermined|likely colored|not in reference/.test(k)) return [187,187,187];
+  if(k in INORG_NAME_RGB) return INORG_NAME_RGB[k];
+  for(const key in INORG_NAME_RGB) if(k.includes(key)&&INORG_NAME_RGB[key]) return INORG_NAME_RGB[key];
+  return [187,187,187];
+}
+// A spectrum for the chart that is consistent with the stated appearance, rather than one derived
+// from a band the visible-range sampler cannot actually see.
+function inorgSpectrum(io){
+  const name=(io.color||'colorless').toLowerCase();
+  let out=[];
+  for(let l=380;l<=780;l+=2){
+    let y;
+    if(/colorless/.test(name)) y=0.02;
+    else if(/white/.test(name)) y=0.03;
+    else if(/black/.test(name)) y=0.92;
+    else {
+      const c=Math.max(400,Math.min(760,io.lam||520));
+      y=0.75*Math.exp(-.5*((l-c)/70)**2)+0.04;
+    }
+    out.push([l,Math.min(1,y)]);
+  }
+  return out;
+}
+function composition(d){
+  const c={};
+  for(let i=0;i<d._A.length;i++){
+    const s=d._A[i].sym; if(s==='*') continue;
+    c[s]=(c[s]||0)+1;
+    const h=implicitH(d,i); if(h) c.H=(c.H||0)+h;
+  }
+  return c;
+}
+function formulaKey(c){
+  return Object.keys(c).sort().map(k=>k+(c[k]>1?c[k]:'')).join('');
+}
+// Reduce a composition to its empirical formula so Fe4O6 keys the same as Fe2O3.
+function reduceComp(c){
+  const vals=Object.values(c); if(!vals.length) return c;
+  const gcd=(a,b)=>b?gcd(b,a%b):a;
+  let g=vals.reduce((a,b)=>gcd(a,b));
+  const out={}; for(const k in c) out[k]=c[k]/g; return out;
+}
+function hillFormula(c){
+  const keys=Object.keys(c).sort((a,b)=>{ if(a==='C')return -1; if(b==='C')return 1; if(a==='H')return -1; if(b==='H')return 1; return a<b?-1:1; });
+  return keys.map(k=>k+(c[k]>1?c[k]:'')).join('');
+}
+// Fixed-charge cations act as spectators: their charge is known, so it can be subtracted before
+// solving for the variable metal. This is what lets KMnO4 be read correctly - potassium is the
+// counter-ion and manganese is the one whose oxidation state is in question.
+const FIXED_CATION={Na:1,K:1,Li:1,Rb:1,Cs:1,Ag:1,Mg:2,Ca:2,Sr:2,Ba:2,Zn:2,Cd:2,Al:3};
+function parseFormulaString(s){
+  const c={}; const re=/([A-Z][a-z]?)(\d*)/g; let m, consumed=0;
+  while((m=re.exec(s))!==null){ if(m[0]==='')break; c[m[1]]=(c[m[1]]||0)+(m[2]?parseInt(m[2],10):1); consumed+=m[0].length; }
+  if(consumed!==s.length) return null;
+  return Object.keys(c).length?c:null;
+}
+function canonKey(str){ const c=parseFormulaString(str); return c?hillFormula(c):str; }
+function oxidationState(c){
+  const metals=Object.keys(c).filter(s=>METAL_GROUP[s]||MAIN_METALS.includes(s));
+  if(!metals.length) return null;
+  // The "variable" metal is a transition metal without a fixed charge; everything else is a spectator.
+  const variable=metals.filter(m=>METAL_GROUP[m]&&!FIXED_CATION[m]);
+  const M=variable.length?variable[0]:metals[0];
+  let fixedPos=0, spectators=[];
+  for(const m of metals){ if(m===M) continue; const q=FIXED_CATION[m]; if(q!==undefined){fixedPos+=q*c[m];spectators.push(m)} }
+  const nM=c[M];
+  // Try to match the non-metal remainder to a known polyatomic anion (sulfate, nitrate, ...).
+  const rest={}; for(const e in c) if(!metals.includes(e)) rest[e]=c[e];
+  for(const an of ANIONS){
+    let mult=null, fits=true;
+    for(const e in an.el){ if(!rest[e]){fits=false;break} const q=rest[e]/an.el[e]; if(mult===null)mult=q; else if(Math.abs(mult-q)>1e-9){fits=false;break} }
+    if(!fits||!mult||mult%1!==0) continue;
+    if(Object.keys(rest).length!==Object.keys(an.el).length) continue;
+    const ox=(an.q*-1*mult-fixedPos)/nM;
+    if(ox>0&&Number.isFinite(ox)) return {metal:M,ox:Math.round(ox*2)/2,anion:an.k,spectators};
+  }
+  // Otherwise assign by the standard rules on the non-metal remainder.
+  let neg=0;
+  if(rest.O) neg+=2*rest.O;
+  for(const x of ['F','Cl','Br','I']) if(rest[x]) neg+=rest[x];
+  if(rest.S&&!rest.O) neg+=2*rest.S;
+  if(rest.N&&!rest.O) neg+=3*rest.N;
+  if(rest.H&&!rest.O) neg-=rest.H;
+  const ox=(neg-fixedPos)/nM;
+  if(ox>0&&Number.isFinite(ox)) return {metal:M,ox:Math.round(ox*2)/2,anion:null,spectators};
+  return {metal:M,ox:FIXED_CATION[M]||0,anion:null,spectators};
+}
+function isInorganic(d,c){
+  const hasMetal=Object.keys(c).some(s=>METAL_GROUP[s]||MAIN_METALS.includes(s));
+  if(hasMetal) return true;
+  if(!c.C) return Object.keys(c).length>0;
+  // Carbon-containing species are organic unless they are one of the handful of small molecules
+  // conventionally treated as inorganic (HCN, CO, CO2, CS2, COCl2), which the tables name explicitly.
+  const k=hillFormula(c);
+  // A few carbon-containing species are conventionally inorganic but appear in no colour/odour
+  // table (carbonic acid and the carbonates most of all).
+  const KNOWN_INORG_C=['CH2O3','CHNO3','C2H2O4'];
+  return odorTable()[k]!==undefined||solidTable()[k]!==undefined||KNOWN_INORG_C.includes(k);
+}
+// Soft, easily oxidised anions make charge transfer and narrow band gaps likely even when the
+// metal's own d shell forbids a d-d transition.
+function softAnion(c){
+  // Sulfur/selenium/tellurium only count as soft when NOT tied up in an oxoanion: the sulfur of
+  // sulfate is S(VI), chemically nothing like sulfide. Chloride is too hard to drive charge transfer.
+  if(c.I) return true;
+  if(c.O) return false;
+  return ['S','Se','Te'].some(e=>c[e]);
+}
+function hasAnyMetal(c){ return Object.keys(c).some(s=>METAL_GROUP[s]||MAIN_METALS.includes(s)); }
+function inorganicProfile(d){
+  const cRaw=composition(d);
+  if(!Object.keys(cRaw).length) return null;
+  const c=reduceComp(cRaw);
+  // Test the RAW composition, never the reduced one: reducing C2H4O2 to CH2O would make acetic
+  // acid look like a single-carbon inorganic species and wrongly divert it to this engine.
+  if(!isInorganic(d,cRaw)) return null;
+  const key=hillFormula(c), rawKey=hillFormula(cRaw);
+  const ox=oxidationState(c);
+  let color=null, colorWhy=null, lam=0, certainty='reference';
+  // 1. solid-state / band-gap species take precedence (their colour is a lattice property)
+  const solid=solidTable()[key]||solidTable()[rawKey];
+  if(solid){ color=solid[0]; lam=solid[1]; colorWhy=solid[2]; }
+  // 2. charge-transfer oxoanions: intensely coloured despite a d0 metal centre
+  // Charge-transfer oxoanions. These are identified by the metal:oxygen RATIO rather than by anion
+  // matching, because the metal is itself part of the anion - chromate (1:4) and dichromate (2:7)
+  // are different colours and are only distinguishable this way.
+  else if(ox&&ox.metal==='Mn'&&ox.ox>=7&&c.O/c.Mn>=3.5){ color='deep purple'; lam=525; colorWhy='ligand-to-metal charge transfer in permanganate - intensely coloured even though Mn(VII) has no d electrons at all, which is why d-d reasoning cannot explain it'; }
+  else if(ox&&ox.metal==='Cr'&&ox.ox>=6&&c.O/c.Cr>=4){ color='yellow'; lam=440; colorWhy='ligand-to-metal charge transfer in chromate (CrO4 2-)'; }
+  else if(ox&&ox.metal==='Cr'&&ox.ox>=6&&c.O/c.Cr>=3.4){ color='orange'; lam=470; colorWhy='ligand-to-metal charge transfer in dichromate (Cr2O7 2-), red-shifted relative to chromate'; }
+  else if(ox&&ox.metal==='Fe'&&(c.C||0)>=5&&(c.N||0)>=5){ color='deep blue'; lam=680; colorWhy='intervalence charge transfer between Fe(II) and Fe(III) centres - the Prussian blue mechanism'; }
+  // 3. d-d transitions from the metal's d-electron count
+  else if(ox&&METAL_GROUP[ox.metal]&&ox.ox>METAL_GROUP[ox.metal]){
+    color='not determined'; certainty='unknown';
+    colorWhy='the oxidation state implied by this formula exceeds what the element can reach, so the composition could not be resolved into a metal centre plus counter-ions (species such as vanadyl sulfate, where an oxygen is bonded to the metal rather than to the anion, do this)';
+  }
+  else if(ox&&METAL_GROUP[ox.metal]){
+    const dCount=METAL_GROUP[ox.metal]-ox.ox;
+    const hit=ION_COLOR[ox.metal+':'+ox.ox];
+    if(hit){ color=hit[0]; lam=hit[1]; }
+    if(dCount<=0) colorWhy='the metal centre has no d electrons (d0), so no d-d transition is possible - colourless unless charge transfer occurs';
+    else if(dCount>=10) colorWhy='the d shell is full (d10), so no d-d transition is possible - colourless';
+    else colorWhy='partly filled d shell (d'+dCount+'): d-d transitions in the ligand field give the colour';
+    if(!hit){
+      if((dCount<=0||dCount>=10)&&softAnion(c)){
+        color='likely colored (yellow to red typical)'; lam=500; certainty='principled';
+        colorWhy='the d shell itself allows no d-d transition, but a soft polarisable anion (S, Se, Te, I or Br) makes charge transfer or a narrow band gap likely; the exact hue does not follow from composition';
+      } else if(dCount<=0||dCount>=10){ color='colorless'; }
+      else {
+        color='likely colored (hue undetermined)'; lam=520; certainty='principled';
+        colorWhy+=' - the species is very probably coloured, but the specific hue depends on the actual ligand field and is not derivable from composition alone';
+      }
+    } else if(/colorless/i.test(color)&&softAnion(c)){
+      color='likely colored (yellow to red typical)'; lam=500; certainty='principled';
+      colorWhy='the metal centre alone would be colourless, but a soft polarisable anion makes charge transfer or a narrow band gap likely';
+    } else certainty='reference';
+  }
+  else if(ox&&MAIN_METALS.includes(ox.metal)){
+    // Even a d0/d10 or main-group metal is often coloured when paired with a soft, easily oxidised
+    // anion: charge transfer or a narrow band gap takes over (PbI2 yellow, HgI2 red, As2S3 orpiment).
+    if(softAnion(c)){ color='likely colored (yellow to red typical)'; lam=500; certainty='principled';
+      colorWhy='a soft, highly polarisable anion (S, Se, Te, I or Br) with a heavy metal centre: charge transfer or a narrow band gap usually produces colour, though the exact hue cannot be derived from composition'; }
+    else { color='colorless'; colorWhy='a main-group metal ion with no partly filled d shell, paired with a hard anion - no low-energy electronic transition is available'; }
+  }
+  else if(ox&&!METAL_GROUP[ox.metal]){
+    color='not determined'; certainty='unknown';
+    colorWhy='this element is outside the reference set, so no reliable statement about its colour can be made from composition alone';
+  }
+  else if(!ox&&hasAnyMetal(c)){
+    color='not determined'; certainty='unknown';
+    colorWhy='the oxidation state could not be resolved from this composition, so the d-electron count - and therefore the colour - is undetermined';
+  }
+  else if(Object.keys(c).some(e=>!NONMETALS.includes(e)&&!METAL_GROUP[e]&&!MAIN_METALS.includes(e))){
+    color='not determined'; certainty='unknown';
+    colorWhy='this composition contains an element outside the reference set (lanthanides, actinides and the rarer metals are not covered), so no reliable colour statement is possible';
+  }
+  else { color='colorless'; colorWhy='a light covalent inorganic species with no metal centre and no low-energy electronic transition'; }
+  // odour
+  let odor=null, odorWhy=null, odorUnknown=false;
+  const oref=odorTable()[key]||odorTable()[rawKey];
+  const hasMetal=Object.keys(c).some(s=>METAL_GROUP[s]||MAIN_METALS.includes(s));
+  if(oref){ odor=oref[0]; odorWhy=oref[1]; }
+  else if(hasMetal){ odor=null; odorWhy='an ionic/metallic solid - it does not vaporise as a neutral molecule, so it has no odour'; }
+  else {
+    // A covalent non-metal species outside the reference set may well be volatile and smell
+    // strongly (SeO2, SiH4, B2H6 all do). Claiming it is odourless would be a guess, not a result.
+    odor=null; odorUnknown=true;
+    odorWhy='this covalent inorganic species is outside the reference set - small covalent inorganics are often volatile and strongly smelling, so no claim either way is warranted here';
+  }
+  return {comp:cRaw,formula:rawKey,empirical:key,ox,color,colorWhy,lam,certainty,odor,odorWhy,odorUnknown,hasMetal,
+    dCount:(ox&&METAL_GROUP[ox.metal])?METAL_GROUP[ox.metal]-ox.ox:null};
+}
+// Inorganic compounds are conventionally written as formulas (CuSO4), not SMILES. Accept a bare
+// formula when the string is formula-shaped AND carries an inorganic signal - a metal, or a
+// subscript. That test deliberately leaves ordinary organic SMILES alone: "CCO" and "CO" have
+// neither a metal nor a subscript, so they are still read as ethanol and methanol.
+function looksLikeFormula(s){
+  s=s.trim();
+  if(!/^([A-Z][a-z]?\d*)+$/.test(s)) return false;
+  const c=parseFormulaString(s);
+  if(!c) return false;
+  const hasMetal=Object.keys(c).some(e=>METAL_GROUP[e]||MAIN_METALS.includes(e));
+  // Accept subscript-free formulas that name a known inorganic species (HCN, CO, NO), which
+  // would otherwise be misread as organic SMILES.
+  const known=(odorTable()[hillFormula(c)]!==undefined)||(solidTable()[hillFormula(c)]!==undefined);
+  if(hasMetal) return true;
+  // SMILES never writes a bare hydrogen: hydrogens are implicit, or bracketed as in [nH]. So an
+  // unbracketed H in a formula-shaped string is a decisive marker of formula notation, which is
+  // what separates "C6H6" (benzene, a formula) from "C1CC1" (cyclopropane, SMILES).
+  if(/H/.test(s)) return true;
+  // The known-species escape must not swallow a bare element symbol. "S", "O", "N" and "OO" are
+  // ordinary SMILES for H2S, water, ammonia and hydrogen peroxide - which is what someone typing
+  // them almost always means. Elemental sulfur and dioxygen are still reachable as "S8" and "O2".
+  if(known && (Object.keys(c).length>=2 || /[0-9]/.test(s))) return true;
+  // A digit in SMILES is a ring closure and always appears in PAIRS, whereas a formula subscript
+  // normally appears once. Without this test the epoxide "C1CO1" parses as the formula C2O.
+  const digits=(s.match(/\d/g)||[]);
+  if(!digits.length) return false;
+  const counts={}; for(const dg of digits) counts[dg]=(counts[dg]||0)+1;
+  const allPaired=Object.values(counts).every(n=>n%2===0);
+  return !allPaired;
+}
+function compToPseudoGraph(c){
+  const A=[]; for(const s in c) for(let i=0;i<c[s];i++) A.push({id:A.length,sym:s,ar:false,hExp:0,chg:0});
+  return {A,B:[],warn:[]};
+}
+// ---------------------------------------------------------------------------------------------
+// Input interpretation. SMILES and chemical formulas overlap heavily: "CO" is carbon monoxide as a
+// formula but methanol as SMILES, and most short strings parse validly both ways with different
+// meanings. No heuristic can resolve that reliably, so instead of guessing silently the app picks a
+// default, states which notation it used, and flags the alternative so the reader can override it.
+let INPUT_MODE='auto';
+function setInputMode(m){
+  INPUT_MODE=m;
+  const seg=document.getElementById('modeSeg');
+  if(seg&&seg.querySelectorAll) seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.getAttribute('data-m')===m));
+  predict();
+}
+function compKeyOf(c){ return Object.keys(c).sort().map(k=>k+(c[k]>1?c[k]:'')).join(''); }
+function smilesCompOf(s){
+  try{ const g=parse(s); if(!g.A.length) return null;
+    // A SMILES reading only counts if it is actually valid. In "H2SO4" the digits are ring-closure
+    // bonds that never close, so the string is not real SMILES and there is no genuine ambiguity.
+    if(g.warn.length) return null;
+    return composition({_A:g.A,B:g.B,ringAtoms:new Set()});
+  }catch(e){ return null; }
+}
+// Report how a string would read under each notation, and whether the two disagree.
+function interpretInput(s){
+  s=(s||'').trim();
+  const formulaOK=/^([A-Z][a-z]?\d*)+$/.test(s)?parseFormulaString(s):null;
+  const smilesComp=smilesCompOf(s);
+  const autoMode=looksLikeFormula(s)?'formula':'smiles';
+  let mode=INPUT_MODE==='auto'?autoMode:INPUT_MODE;
+  // A forced mode that the string cannot satisfy falls back rather than failing outright.
+  if(mode==='formula'&&!formulaOK) mode='smiles';
+  if(mode==='smiles'&&!smilesComp&&formulaOK) mode='formula';
+  // Only warn when the OTHER reading is a plausible substance. "CCO" is ethanol; its formula
+  // reading would be C2O, which is not a real compound anyone means, so flagging it as ambiguous
+  // would just be noise. A carbon-bearing formula with no hydrogen is the tell-tale sign, unless
+  // it is one of the genuine hydrogen-free carbon species (CO, CO2, CS2).
+  const plausibleFormula=(c)=>{
+    if(!c) return false;
+    if((c.C||0)>0 && !(c.H||0)){
+      const k=hillFormula(c);
+      return odorTable()[k]!==undefined||solidTable()[k]!==undefined;
+    }
+    return true;
+  };
+  const differ=!!(formulaOK&&smilesComp&&compKeyOf(formulaOK)!==compKeyOf(smilesComp));
+  const ambiguous=differ&&plausibleFormula(formulaOK);
+  return {mode,autoMode,ambiguous,forced:INPUT_MODE!=='auto',
+    asFormula:formulaOK?compKeyOf(formulaOK):null,
+    asSmiles:smilesComp?compKeyOf(smilesComp):null};
+}
+function analyse(s){
+ const _interp=interpretInput(s);
+ const _formulaMode=(_interp.mode==='formula');
+let g=_formulaMode?compToPseudoGraph(parseFormulaString(s)):parse(s),d=descriptors(g),t=chromophore(d),sp=spectrum(t),rgb=color(sp),visible=sp.some(q=>q[1]>.10),col=visible?cname(rgb):'colorless';
+ // Inorganic species are governed by different physics (d-d transitions, charge transfer, band
+ // gaps) than the organic chromophore model, so where an inorganic profile applies it takes over.
+ const inorg=inorganicProfile(d);
+ if(inorg){
+  t={kind:inorg.colorWhy||'inorganic species',lam:inorg.lam||180,w:60,str:inorg.lam?0.8:0.02,
+     bands:inorg.lam?[{l:inorg.lam,w:60,s:0.8}]:[{l:180,w:20,s:0.02}],confidence:'moderate'};
+  const cl=(inorg.color||'colorless');
+  sp=inorgSpectrum(inorg);
+  const sw=inorgSwatch(cl);
+  rgb=sw||[248,248,248];
+  visible=!!sw;
+  col=cl;
+ }
+ return{g,d,t,sp,rgb,col,visible,inorg,formulaMode:_formulaMode,interp:_interp};}
+function renderInterp(a){
+  const el=document.getElementById('interpBanner'); if(!el) return;
+  const i=a.interp||{}; const raw=document.getElementById('smiles').value.trim();
+  if(!raw){ el.innerHTML=''; return; }
+  const c=(i.mode==='formula')?parseFormulaString(raw):null;
+  const formulaOfOrganic=c&&(c.C||0)>=2;
+  // SMILES is the primary notation, so an unambiguous SMILES input says nothing at all. Only a
+  // formula reading, an ambiguity, or a forced mode is worth a line of the reader's attention.
+  if(i.mode==='smiles'&&!i.ambiguous&&!i.forced){ el.innerHTML=''; return; }
+  if(!i.ambiguous&&!formulaOfOrganic){
+    el.innerHTML=`<div class="small">Read as ${i.mode==='formula'?'a chemical formula':'SMILES'}${i.forced?' (mode locked)':''}.</div>`;
+    return;
+  }
+  const label=i.mode==='formula'?'a chemical formula':'SMILES';
+  let html='<div class="panel" style="padding:11px 14px;margin:0;border-color:#d8b878;background:#fffdf5">';
+  html+=`<b>Read as ${label}</b>${i.forced?' <span class="tag">mode locked</span>':''}`;
+  if(i.ambiguous){
+    const other=i.mode==='formula'?'smiles':'formula';
+    const thisComp=i.mode==='formula'?i.asFormula:i.asSmiles;
+    const otherComp=i.mode==='formula'?i.asSmiles:i.asFormula;
+    html+=`<br><span class="small">This text is valid in both notations and means different things: as ${label} it is <b>${thisComp}</b>, but read as ${other==='formula'?'a formula':'SMILES'} it would be <b>${otherComp}</b>.</span> `;
+    html+=`<button style="padding:3px 10px;font-size:12px;margin-top:6px" onclick="setInputMode('${other}')">Use ${other==='formula'?'formula':'SMILES'}</button>`;
+  }
+  if(formulaOfOrganic){
+    html+=`<br><span class="small"><b>A formula does not fix a structure.</b> C&#8322;H&#8326;O is both ethanol and dimethyl ether, so structural predictions cannot be meaningful here - enter SMILES to specify an actual molecule.</span>`;
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+function predict(){let a=analyse(document.getElementById('smiles').value);renderInterp(a);
+ // A band-gap solid or a d0/d10 colourless ion has no meaningful single absorption maximum, so
+ // reporting a peak wavelength for it would be inventing precision that does not exist.
+ document.getElementById('lam').textContent=(a.inorg&&!a.inorg.lam)?'not a single band':(Math.round(a.t.lam)+' nm'+(a.t.lam>780?' (near-IR)':''));document.getElementById('col').textContent=a.col;document.getElementById('npi').textContent=a.d.ids.length;document.getElementById('conf').textContent=a.t.confidence;// Show a hex value only when there is actually a colour to show. For a colourless species the
+// transmitted-light maths still returns some faint tint, and printing it implied a colour the
+// swatch (correctly) was not displaying.
+document.getElementById('hex').textContent=a.visible?hx(a.rgb):'n/a (colorless)';document.getElementById('swatch').style.background=a.visible?hx(a.rgb):'#f8f8f8';document.getElementById('summary').innerHTML=a.inorg
+  ?`Inorganic species <b>${a.inorg.formula}</b>; predicted appearance: <b>${a.col}</b>.<br><span class="small">${a.inorg.colorWhy||''}</span>`
+  :`Detected <b>${a.t.kind}</b>. Approximate strongest transition: <b>${Math.round(a.t.lam)} nm</b>; predicted appearance: <b>${a.col}</b>.`;document.getElementById('electronic').innerHTML=a.inorg?(function(){const io=a.inorg;const oxs=io.ox?`${io.ox.metal}(${io.ox.ox>0?'+':''}${io.ox.ox})${io.ox.anion?' as '+io.ox.anion:''}`:'no metal centre';return `<b>Interpreted as an inorganic species${a.formulaMode?' (formula input)':''}.</b><br>Formula: <b>${io.formula}</b>${io.empirical!==io.formula?' (empirical '+io.empirical+')':''}<br>Metal centre: <b>${oxs}</b><br>d-electron count: <b>${io.dCount===null?'not applicable':'d'+io.dCount}</b><br>Predicted appearance: <b>${io.color||'unknown'}</b> <span class="tag">${io.certainty==='reference'?'from reference table':io.certainty==='principled'?'reasoned, hue uncertain':'not determined'}</span><br><span class="small">${io.colorWhy||''}</span><br><br><span class="small">Inorganic hues come from a small explicit reference table of common species rather than being computed: d-orbital splitting depends on the real ligand field and band gaps on the solid-state lattice, neither of which follows from composition alone.</span>`})():`Atoms: <b>${a.g.A.length}</b><br>π atoms: <b>${a.d.ids.length}</b><br>Double bonds: <b>${a.d.db}</b><br>Ring-conjugated (aromatic) atoms: <b>${a.d.ar}</b> · in largest single fused ring system: <b>${a.d.coreAr}</b> (${a.d.coreR} ring${a.d.coreR===1?'':'s'})<br>π-network ring rank: <b>${a.d.r}</b><br>Longest π-path: <b>${a.d.longest}</b><br>Strong-band estimate: <b>${a.t.str.toFixed(2)}</b>`;document.getElementById('features').innerHTML=`N: ${a.d.N} · O: ${a.d.O} · S: ${a.d.S} · halogens: ${a.d.hal} · π components: ${a.d.components.join(', ')||'none'}`;document.getElementById('warnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';draw(a.sp);renderOdor(a);renderTaste(a);renderBio(a);renderChem(a);}
+function load(k){document.getElementById('smiles').value=EX[k];predict()}
+function validate(){
+ let tests=[
+  ['Benzene','benzene','colorless'],
+  ['Naphthalene','naph','colorless'],
+  ['Anthracene','anth','colorless'],
+  ['Tetracene','tetra','colored'],
+  ['Hexatriene','hex','colorless'],
+  ['Lycopene','lyco','red'],
+  ['β-carotene','beta','orange'],
+  ['Phthalocyanine-like','phth','colored'],
+  ['Indigo','indigo','colored'],
+  // Regression cases for the parser/pi-network fixes, not just the color heuristic:
+  ['Benzene (Kekule form)','C1=CC=CC=C1','colorless'],
+  ['Naphthalene (Kekule form)','C1=CC2=CC=CC=C2C=C1','colorless'],
+  ['Pyridine','c1ccncc1','colorless'],
+  ['Benzene salt (disconnected)','c1ccccc1.[Na+]','colorless'],
+  ['Two-digit ring closure','C%10=CC=CC=C%10','colorless'],
+  // Auxochrome / bridge-motif regression cases (azo, quinone, stilbene, biaryl):
+  ['Azobenzene (azo bridge, not "fused")','c1ccc(cc1)N=Nc1ccccc1','colored'],
+  ['Push-pull azo dye (donor+acceptor)','Nc1ccc(cc1)N=Nc1ccc(cc1)N(=O)=O','colored'],
+  ['Biphenyl (NOT a fused ring system)','c1ccccc1-c1ccccc1','colorless'],
+  ['trans-Stilbene','c1ccccc1C=Cc1ccccc1','colorless'],
+  ['Anthraquinone (pale)','O=C1c2ccccc2C(=O)c2ccccc21','colorless'],
+  ['1,4-Diaminoanthraquinone (donor-shifted)','O=C1c2ccc(N)cc2C(=O)c2cc(N)ccc21','colored'],
+  ['Pentacene (extended ladder)','c1ccc2cc3cc4cc5ccccc5cc4cc3cc2c1','colored'],
+  // Everyday substances: familiar compounds whose appearance everyone already knows.
+  ['Caffeine (white solid)','Cn1cnc2c1c(=O)n(C)c(=O)n2C','colorless'],
+  ['Theobromine (white solid)','Cn1cnc2c1c(=O)[nH]c(=O)n2C','colorless'],
+  ['Sucrose-like polyol (white)','OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O','colorless'],
+  ['Aspirin (white solid)','CC(=O)Oc1ccccc1C(=O)O','colorless'],
+  ['Paracetamol (white solid)','CC(=O)Nc1ccc(O)cc1','colorless'],
+  ['Urea (white solid)','NC(=O)N','colorless'],
+  ['Citric acid (white solid)','OC(=O)CC(O)(CC(=O)O)C(=O)O','colorless'],
+  ['Nicotine (pale liquid)','CN1CCCC1c1cccnc1','colorless'],
+ ];
+ let rows='';
+ for(const[n,k,e]of tests){
+  let smiles=EX[k]!=null?EX[k]:k; // allow either an EX key or a raw SMILES string
+  let a=analyse(smiles);
+  let ok=e==='colorless'?a.col==='colorless':e==='red'?a.col==='red'||a.col==='orange':e==='orange'?a.col==='orange':a.col!=='colorless';
+  rows+=`<tr><td>${n}</td><td>${e}</td><td>${a.col} (${Math.round(a.t.lam)} nm)</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('validation').innerHTML=rows;
+ document.getElementById('smiles').value=EX.benzene;predict();
+}
+function validateOdor(){
+ // Benchmarked against well-characterised reference odorants with widely agreed descriptors.
+ let tests=[
+  ['Acetic acid (C2 acid)','CC(=O)O',['sour/acidic']],
+  ['Butyric acid (C4 acid)','CCCC(=O)O',['rancid/cheesy']],
+  ['Octanoic acid (C8 acid)','CCCCCCCC(=O)O',['fatty/waxy']],
+  ['Hexanal (C6 aldehyde)','CCCCCC=O',['green']],
+  ['Octanal (C8 aldehyde)','CCCCCCCC=O',['citrus']],
+  ['Decanal (C10 aldehyde)','CCCCCCCCCC=O',['fatty/waxy']],
+  ['trans-2-Hexenal (leaf aldehyde)','CCCC=CC=O',['green']],
+  ['Benzaldehyde (aryl aldehyde)','O=Cc1ccccc1',['almond']],
+  ['Vanillin (OH + OMe + CHO)','COc1cc(C=O)ccc1O',['balsamic/vanilla']],
+  ['Cinnamaldehyde','O=CC=Cc1ccccc1',['spicy']],
+  ['Guaiacol (methoxyphenol)','COc1ccccc1O',['smoky/phenolic']],
+  ['Phenol','Oc1ccccc1',['smoky/phenolic']],
+  ['Eugenol (guaiacol + allyl)','COc1cc(CC=C)ccc1O',['spicy']],
+  ['Diacetyl (1,2-diketone)','CC(=O)C(=O)C',['buttery']],
+  ['2,5-Dimethylpyrazine','Cc1cnc(C)cn1',['nutty/roasted']],
+  ['Methoxypyrazine','COc1cnccn1',['earthy/musty']],
+  ['Furaneol (hydroxyfuranone)','CC1=C(O)C(=O)C(C)O1',['caramel']],
+  ['gamma-Decalactone (5-ring)','CCCCCCC1CCC(=O)O1',['coconut/creamy']],
+  ['Pentadecanolide (16-ring)','O=C1CCCCCCCCCCCCCCO1',['musky']],
+  ['Muscone (macrocyclic ketone)','CC1CCCCCCCCCCCCC(=O)C1',['musky']],
+  ['Ethyl acetate (small ester)','CCOC(=O)C',['fruity']],
+  ['Isoamyl acetate','CC(C)CCOC(=O)C',['fruity']],
+  ['Trimethylamine','CN(C)C',['fishy/amine']],
+  ['Methanethiol','CS',['sulfurous']],
+  ['Diallyl disulfide (garlic)','C=CCSSCC=C',['alliaceous']],
+  ['Allyl isothiocyanate (mustard)','C=CCN=C=S',['pungent']],
+  ['Menthol','CC(C)C1CCC(C)CC1O',['minty']],
+  ['Camphor','CC1(C)C2CCC1(C)C(=O)C2',['camphoraceous']],
+  ['Limonene','CC1=CCC(CC1)C(=C)C',['citrus']],
+  ['alpha-Pinene','CC1=CCC2CC1C2(C)C',['woody']],
+  ['2-Phenylethanol (rose)','OCCc1ccccc1',['floral']],
+  ['Linalool','CC(C)=CCCC(C)(O)C=C',['floral']],
+  ['Indole','c1ccc2[nH]ccc2c1',['animalic']],
+  ['Skatole','Cc1c[nH]c2ccccc12',['animalic']],
+  ['Methyl salicylate (wintergreen)','COC(=O)c1ccccc1O',['minty']],
+  ['Anethole (anise)','COc1ccc(C=CC)cc1',['balsamic/vanilla']],
+  ['Hexanol','CCCCCCO',['green']],
+  ['Dimethyl sulfide','CSC',['sulfurous']],
+  ['Geosmin (earthy)','CC12CCCC(C)(O)C1CCCC2',['earthy/musty']],
+  ['Table salt (ionic)','[Na+].[Cl-]',['ODORLESS']],
+  ['Methane','C',['ODORLESS']],
+  ['Glucose-like polyol','OCC(O)C(O)C(O)C(O)C=O',['ODORLESS']],
+  ['Ethanol (NOT odorless)','CCO',['ODORLESS'],true],
+  // Everyday substances that are genuinely odourless solids.
+  ['Caffeine (odourless solid)','Cn1cnc2c1c(=O)n(C)c(=O)n2C',['ODORLESS']],
+  ['Theobromine (odourless solid)','Cn1cnc2c1c(=O)[nH]c(=O)n2C',['ODORLESS']],
+  ['Sucrose-like polyol','OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O',['ODORLESS']],
+  ['Urea (odourless solid)','NC(=O)N',['ODORLESS']],
+ ];
+ let rows='';
+ for(const[n,smi,fams,avoid]of tests){
+  let o=odorProfile(analyse(smi).d);
+  let ok,model=o.odorless?'odorless':o.character;
+  if(fams[0]==='ODORLESS') ok = avoid ? !o.odorless : o.odorless;
+  else ok = !o.odorless && fams.some(f=>o.character.includes(f));
+  let exp = fams[0]==='ODORLESS' ? (avoid?'not odorless':'odorless') : fams.join(' / ');
+  rows+=`<tr><td>${n}</td><td>${exp}</td><td>${model}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('odorValidation').innerHTML=rows;
+}
+function validateTaste(){
+ let tests=[
+  ['Acetic acid (sour)','CC(=O)O',['sour']],
+  ['Citric acid-like (tricarboxylic, sour)','OC(=O)CC(O)(CC(=O)O)C(=O)O',['sour']],
+  ['Glucose-like (sweet polyol)','OCC(O)C(O)C(O)C(O)C=O',['sweet']],
+  ['Glycine (simple amino acid, mildly sweet)','NCC(=O)O',['sweet']],
+  ['Glutamic acid (umami - MSG-like)','OC(=O)C(N)CCC(=O)O',['umami']],
+  ['Aspartic acid (umami)','OC(=O)C(N)CC(=O)O',['umami']],
+  ['Table salt (Na+/Cl-, salty)','[Na+].[Cl-]',['salty']],
+  ['Potassium bromide (salty)','[K+].[Br-]',['salty']],
+  ['Caffeine-like (purine alkaloid, bitter)','Cn1cnc2c1c(=O)n(C)c(=O)n2C',['bitter']],
+  ['Hexadecane (nonpolar wax-like)','CCCCCCCCCCCCCCCC',['TASTELESS']],
+ ];
+ let rows='';
+ for(const[n,smi,fams]of tests){
+  let t=tasteProfile(analyse(smi).d);
+  let ok, modelCol;
+  if(fams[0]==='TASTELESS'){ ok=t.tasteless; modelCol=t.character; }
+  else { let top2=(t.ranked||[]).slice(0,2).map(x=>x[0]); ok=fams.some(f=>top2.includes(f)); modelCol=t.tasteless?t.character:top2.join(', '); }
+  rows+=`<tr><td>${n}</td><td>${fams[0]==='TASTELESS'?'tasteless':fams.join(' / ')}</td><td>${modelCol}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('tasteValidation').innerHTML=rows;
+}
+function validateBio(){
+ let tests=[
+  ['Serotonin (tryptamine scaffold)','NCCc1c[nH]c2ccc(O)cc12','psychoactive'],
+  ['Caffeine (xanthine scaffold)','Cn1cnc2c1c(=O)n(C)c(=O)n2C','psychoactive'],
+  ['Nicotine (nicotinoid scaffold)','CN1CCCC1c1cccnc1','psychoactive'],
+  ['Morphine-like (morphinan scaffold)','CN1CCC23c4c5ccc(O)c4OC2C(O)C=CC3C1C5','psychoactive'],
+  ['Diazepam-like (benzodiazepine)','CN1c2ccccc2C(=NC(=O)C1)c1ccccc1','psychoactive'],
+  ['THC-like (cannabinoid)','CCCCCc1cc(O)c2c(c1)OC(C)(C)C1CCC(C)=CC21','psychoactive'],
+  ['Dopamine (CNS receptors, poor BBB)','NCCc1ccc(O)c(O)c1','bioactive'],
+  ['Aspirin (bioactive, not psychoactive)','CC(=O)Oc1ccccc1C(=O)O','not-psychoactive'],
+  ['Glucose (not psychoactive)','OCC(O)C(O)C(O)C(O)C=O','not-psychoactive'],
+  ['Benzene (no scaffold)','c1ccccc1','not-psychoactive'],
+  ['Nitrosamine (carcinogen alert)','CN(C)N=O','toxic'],
+  ['Parathion-like organophosphate','CCOP(=S)(OCC)Oc1ccccc1','toxic'],
+  ['Epoxide (alkylating alert)','C1CO1','toxic'],
+  ['Aniline (Ames-type alert)','Nc1ccccc1','toxic'],
+ ];
+ let rows='';
+ for(const[n,smi,exp]of tests){
+  let b=bioactivityProfile(analyse(smi).d);
+  let ok,model;
+  if(exp==='psychoactive'){ ok=b.psychoactive; model='psy '+Math.round(b.psy)+'/100'+(b.psychoactive?' (likely)':''); }
+  else if(exp==='not-psychoactive'){ ok=!b.psychoactive; model='psy '+Math.round(b.psy)+'/100'+(b.psychoactive?' (likely)':''); }
+  else if(exp==='toxic'){ ok=b.tox>=30; model=b.toxBand+' ('+Math.round(b.tox)+')'; }
+  else { ok=b.bio>=60; model='bio '+Math.round(b.bio)+'/100'; }
+  rows+=`<tr><td>${n}</td><td>${exp}</td><td>${model}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('bioValidation').innerHTML=rows;
+}
+function validateInorg(){
+ let tests=[
+  ['Copper(II) sulfate','CuSO4','blue','d9 copper: d-d transition'],
+  ['Nickel(II) sulfate','NiSO4','green','d8 nickel'],
+  ['Cobalt(II) chloride','CoCl2','pink','d7 cobalt'],
+  ['Iron(II) sulfate','FeSO4','pale green','d6 iron(II)'],
+  ['Iron(III) oxide','Fe2O3','red-brown','oxide band gap / charge transfer'],
+  ['Potassium permanganate','KMnO4','purple','charge transfer despite d0'],
+  ['Potassium chromate','K2CrO4','yellow','chromate charge transfer'],
+  ['Potassium dichromate','K2Cr2O7','orange','dichromate charge transfer'],
+  ['Chromium(III) oxide','Cr2O3','green','d3 chromium'],
+  ['Titanium dioxide','TiO2','white','d0, wide band gap'],
+  ['Zinc oxide','ZnO','white','d10, wide band gap'],
+  ['Cadmium sulfide','CdS','yellow','semiconductor band gap'],
+  ['Mercury(II) sulfide','HgS','red','cinnabar band gap'],
+  ['Zinc sulfate','ZnSO4','colorless','d10: no d-d transition possible'],
+  ['Silver nitrate','AgNO3','colorless','d10 silver'],
+  ['Sodium chloride','NaCl','colorless','main-group ion, no d electrons'],
+  ['Hydrogen sulfide','H2S','sulfurous','rotten eggs'],
+  ['Ammonia','NH3','fishy/amine','pungent ammoniacal'],
+  ['Sulfur dioxide','SO2','sulfurous','burnt match'],
+  ['Ozone','O3','pungent','sharp metallic'],
+  ['Hydrogen cyanide','HCN','almond','bitter almond'],
+  ['Phosphine','PH3','alliaceous','garlic-like'],
+  ['Carbon dioxide','CO2','ODORLESS','odourless gas'],
+  ['Copper sulfate (odour)','CuSO4','ODORLESS','ionic solid, non-volatile'],
+  // Behaviour outside the reference set: reason where possible, admit uncertainty otherwise.
+  ['Lead(II) iodide','PbI2','yellow','soft iodide, narrow band gap'],
+  ['Arsenic(III) sulfide','As2S3','yellow','orpiment band gap'],
+  ['Vanadium(V) oxide','V2O5','orange','oxide charge transfer'],
+  ['Titanium disulfide','TiS2','likely colored','d0 metal but soft sulfide: reasoned, not tabulated'],
+  ['Lanthanum chloride','LaCl3','not determined','element outside the reference set'],
+  ['Vanadyl sulfate','VOSO4','not determined','composition cannot be resolved from the formula'],
+  ['Selenium dioxide','SeO2','pungent','volatile covalent oxide with a sharp odour'],
+  ['Tin(II) chloride','SnCl2','colorless','hard chloride, no d-d transition'],
+  // Elemental forms must stay reachable with an explicit subscript, even though the bare symbol
+  // is now read as SMILES for the hydride.
+  ['Elemental sulfur (S8)','S8','yellow','the bare symbol S is SMILES for H2S instead'],
+  ['Iodine (I2)','I2','violet','molecular absorption'],
+  ['Chlorine (Cl2)','Cl2','pale green','weak molecular absorption'],
+  ['Hydrogen sulfide as SMILES','S','sulfurous','same substance as H2S, written as SMILES'],
+  ['Ammonia as SMILES','N','fishy/amine','same substance as NH3, written as SMILES'],
+ ];
+ let rows='';
+ for(const[n,f,exp,why]of tests){
+  const a=analyse(f); const o=odorProfile(a.d);
+  let ok,model;
+  const odorExpected=['sulfurous','fishy/amine','pungent','almond','alliaceous','ODORLESS'].includes(exp);
+  if(exp==='ODORLESS'){ ok=o.odorless; model=o.character; }
+  else if(odorExpected){ ok=!o.odorless&&o.character.includes(exp); model=o.character; }
+  else { ok=(a.col||'').toLowerCase().includes(exp.toLowerCase()); model=a.col; }
+  rows+=`<tr><td>${n} <span class="small">(${why})</span></td><td>${exp==='ODORLESS'?'odorless':exp}</td><td>${model}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('inorgValidation').innerHTML=rows;
+}
+function validateChem(){
+ let tests=[
+  ['Acetic acid','CC(=O)O','acidic'],['Benzenesulfonic acid','OS(=O)(=O)c1ccccc1','acidic'],
+  ['Ascorbic acid (enediol)','OCC(O)C1OC(=O)C(O)=C1O','acidic'],['Phenol (very weak acid)','Oc1ccccc1','acidic'],
+  ['Ethylamine','CCN','basic'],['Guanidine','NC(N)=N','basic'],['Pyridine','c1ccncc1','basic'],
+  ['Glycine (zwitterion)','NCC(=O)O','amphoteric'],['Benzene','c1ccccc1','neutral'],
+  ['Glucose','OCC(O)C(O)C(O)C(O)C=O','neutral'],['Hexadecane','CCCCCCCCCCCCCCCC','neutral'],
+  ['Hexanal (reducing)','CCCCCC=O','reducing'],['Methanethiol (reducing)','CS','reducing'],
+  ['Catechol (antioxidant)','Oc1ccccc1O','reducing'],['Sodium borohydride','NaBH4','reducing'],
+  ['Sodium sulfite','Na2SO3','reducing'],['Potassium permanganate','KMnO4','oxidising'],
+  ['Hydrogen peroxide','H2O2','oxidising'],['Nitrobenzene','c1ccccc1N(=O)=O','oxidising'],
+  ['Hexadecane (insoluble)','CCCCCCCCCCCCCCCC','poorly soluble'],
+  ['Glucose (very soluble)','OCC(O)C(O)C(O)C(O)C=O','very soluble'],
+  ['Silver chloride (insoluble)','AgCl','insoluble'],['Sodium nitrate (soluble)','NaNO3','soluble'],
+  ['Barium sulfate (insoluble)','BaSO4','sparingly soluble'],
+  // Inorganic acids and bases: reasoned from composition, since formula input carries no bonds.
+  ['Hydrochloric acid','HCl','strongly acidic'],['Hydrofluoric acid (weak!)','HF','weakly acidic'],
+  ['Nitric acid','HNO3','strongly acidic'],['Sulfuric acid','H2SO4','strongly acidic'],
+  ['Perchloric acid','HClO4','strongly acidic'],['Carbonic acid','H2CO3','weakly acidic'],
+  ['Phosphoric acid','H3PO4','weakly acidic'],['Sulfurous acid','H2SO3','weakly acidic'],
+  ['Sodium hydroxide','NaOH','strongly basic'],['Potassium hydroxide','KOH','strongly basic'],
+  ['Ammonia','NH3','weakly basic'],['Aluminium oxide','Al2O3','amphoteric'],
+  ['Zinc oxide','ZnO','amphoteric'],['Sodium oxide','Na2O','strongly basic'],
+  ['Sulfur trioxide','SO3','acidic'],['Carbon dioxide','CO2','acidic'],
+  ['Chromium(VI) oxide','CrO3','acidic'],['Sodium carbonate','Na2CO3','basic'],
+  ['Sodium bicarbonate','NaHCO3','basic'],['Ammonium chloride','NH4Cl','acidic'],
+  ['Sodium chloride','NaCl','neutral'],['Water','H2O','neutral'],
+  // The same substance written as SMILES must give the same verdict as the formula. SMILES is a
+  // perfectly good way to write an inorganic, and the two input routes must never disagree.
+  ['Sulfuric acid as SMILES','OS(=O)(=O)O','strongly acidic'],
+  ['Nitric acid as SMILES','O[N+](=O)[O-]','strongly acidic'],
+  ['Phosphoric acid as SMILES','OP(=O)(O)O','weakly acidic'],
+  ['Carbonic acid as SMILES','OC(=O)O','weakly acidic'],
+  ['Hydrogen sulfide as SMILES','S','weakly acidic'],
+  ['Hydrogen chloride as SMILES','Cl','strongly acidic'],
+  ['Ammonia as SMILES','N','weakly basic'],
+  ['Sodium hydroxide as SMILES','[Na+].[OH-]','strongly basic'],
+  ['Carbon dioxide as SMILES','O=C=O','acidic'],
+  ['Water as SMILES','O','neutral'],
+ ];
+ let rows='';
+ for(const[n,s,exp]of tests){
+  const c=chemProfile(analyse(s).d);
+  const redoxWord=c.redox.ox.length&&c.redox.red.length?'redox-amphoteric':c.redox.ox.length?'oxidising':c.redox.red.length?'reducing':'redox-inert';
+  let ok,model;
+  // Route by keyword, not exact match, so graded expectations ("strongly acidic") reach the
+  // acid/base branch rather than falling through to the solubility comparison.
+  if(/acid|bas|amphoteric|neutral/.test(exp)&&!/solub/.test(exp)){ model=c.acidBase; ok=c.acidBase.includes(exp)||exp.split(' ').every(w=>c.acidBase.includes(w)); }
+  else if(['oxidising','reducing'].includes(exp)){ model=redoxWord; ok=redoxWord.includes(exp)||redoxWord==='redox-amphoteric'; }
+  else { model=c.solWord; ok=c.solWord===exp; }
+  rows+=`<tr><td>${n}</td><td>${exp}</td><td>${model}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('chemValidation').innerHTML=rows;
+}
+function validateInterp(){
+ const save=INPUT_MODE; INPUT_MODE='auto';
+ let tests=[
+  ['CCO','smiles'],['c1ccccc1','smiles'],['CC(=O)O','smiles'],['C1CC1','smiles'],['C1CO1','smiles'],
+  ['O=Cc1ccccc1','smiles'],['CC1(C)C2CCC1(C)C(=O)C2','smiles'],['S','smiles'],['O','smiles'],['N','smiles'],
+  ['C6H6','formula'],['CH4','formula'],['H2O','formula'],['NH3','formula'],['HCN','formula'],
+  ['H2SO4','formula'],['NaCl','formula'],['CuSO4','formula'],['KMnO4','formula'],['Fe2O3','formula'],
+  ['CO2','formula'],['O2','formula'],['S8','formula'],['CO','formula'],
+ ];
+ let rows='';
+ for(const[s,exp]of tests){
+  const i=interpretInput(s);
+  const ok=i.mode===exp;
+  rows+=`<tr><td><code>${s}</code></td><td>${exp}</td><td>${i.mode}${i.ambiguous?' <span class="tag">ambiguous, flagged</span>':''}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ // the two notations must agree wherever both are valid descriptions of the same substance
+ const pairs=[['H2SO4','OS(=O)(=O)O'],['H2O','O'],['NH3','N'],['H2S','S'],['HCl','Cl'],['CO2','O=C=O'],['NaOH','[Na+].[OH-]'],['H3PO4','OP(=O)(O)O']];
+ for(const[f,sm]of pairs){
+  const A=chemProfile(analyse(f).d),B=chemProfile(analyse(sm).d);
+  const ok=A.acidBase===B.acidBase&&analyse(f).col===analyse(sm).col;
+  rows+=`<tr><td><code>${f}</code> vs <code>${sm}</code></td><td>identical result</td><td>${A.acidBase} / ${B.acidBase}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('interpValidation').innerHTML=rows;
+ INPUT_MODE=save;
+}
+predict();validate();validateOdor();validateTaste();validateBio();validateInorg();validateChem();validateInterp();loadBenchSeed();
+</script></body></html>

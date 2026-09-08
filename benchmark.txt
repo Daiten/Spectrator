@@ -1,0 +1,17 @@
+#Butyric acid
+O=C(O)CCC, acidbase, acid, odor, rancid/cheesy, color, colorless, taste, sour, solubility, soluble 
+#Citric acid
+OC(=O)CC(O)(C(=O)O)CC(=O)O, color, colorless, odor, odorless, taste, sour, acidbase, acid, solubility, soluble
+#Eicosapentaenoic acid
+O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbase, acid
+#Epigallocatechin gallate
+O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
+#Malic acid
+O=C(O)CC(O)C(=O)O, color, colorless, taste, sour, acidbase, acid, solubility, soluble, odor, odorless
+#Nitric acid
+[N+](=O)(O)[O-], color, colorless, odor, pungent/acrid, acidbase, acid, toxic, high, redox, oxidising
+#Succinic Acid
+C(CC(=O)O)C(=O)O, acidbase, acid, solubility, soluble, odor, odorless, taste, sour, color, colorless
+#Tartaric Acid 
+O=C(O)C(O)C(O)C(=O)O, color, colorless, taste, sour, acidbase, acid, odor, odorless, solubility, soluble
+
