@@ -1,0 +1,5 @@
+O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC,odor,fishy  -> model said: fatty/waxy
+O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4,toxic,low  -> model said: no structural alerts found
+O=C(O)CC(O)C(=O)O,odor,odorless  -> model said: rancid/cheesy + sour/acidic + ethereal/solvent
+[N+](=O)(O)[O-],toxic,high  -> model said: no structural alerts found
+C(CC(=O)O)C(=O)O,odor,odorless  -> model said: rancid/cheesy + sour/acidic
