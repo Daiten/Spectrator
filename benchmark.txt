@@ -6,6 +6,8 @@ OC(=O)CC(O)(C(=O)O)CC(=O)O, color, colorless, odor, odorless, taste, sour, acidb
 O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbase, acid
 #Epigallocatechin gallate
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
+#Lactic acid
+CC(O)C(=O)O, acidbase, acid, solubility, soluble, taste, sour, color, colorless, odor, sour
 #Malic acid
 O=C(O)CC(O)C(=O)O, color, colorless, taste, sour, acidbase, acid, solubility, soluble, odor, odorless
 #Nitric acid
