@@ -1,5 +1,20 @@
+CC1=CC(=CC(=C1N)S(=O)(=O)[O-])/C(=C\2/C=CC(=[NH2+])C(=C2)S(=O)(=O)[O-])/C3=CC(=C(C=C3)N)S(=O)(=O)[O-].[Na+].[Na+],color,magenta  -> model said: colorless
+[O-]S(C(C=C4)=CC=C4/N=N/C(C=C2)=C3C(C=C(S([O-])(=O)=O)C=C3)=C2/N=N/C1=C(S([O-])(=O)=O)C=C(C=C(S([O-])(=O)=O)C(N)=C5)C5=C1O)(=O)=O.[Na+].[Na+].[Na+].[Na+],color,black  -> model said: colorless
+O=CC=C(C)CCC=C(C)C,color,yellow  -> model said: colorless
+O=CC=C(C)CCC=C(C)C,taste,bitter+sweet  -> model said: weak / uncertain
+CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O,psychoactive,yes  -> model said: no
+CN(CCC1=CNC2=C1C=CC=C2)C,psychoactive,yes  -> model said: no
+CN(CCC1=CNC2=C1C=CC=C2)C,toxic,low  -> model said: no structural alerts found
+C1=NC2=C(N1C3C(C(C(O3)COP(=O)([O-])[O-])O)O)NC(=NC2=O)N.[Na+].[Na+],taste,umami  -> model said: bitter + sweet
 O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC,odor,fishy  -> model said: fatty/waxy
+O=CO,redox,reducing  -> model said: redox-inert
+O=CO,toxic,low  -> model said: no structural alerts found
+O=C(OC/C=C(/CC/C=C(\C)C)C)C,taste,sweet  -> model said: weak / uncertain
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4,toxic,low  -> model said: no structural alerts found
+O=C(\C1=C(/O)\C(=C(\O)[C@](O)(C1=O)C\C=C(/C)C)C\C=C(/C)C)CC(C)C,taste,bitter  -> model said: sweet
+N#Cc1ccc(cc1)N/C(NCC(O)=O)=N\Cc2cccc3OCOc23,taste,sweet  -> model said: bitter
 O=C(O)CC(O)C(=O)O,odor,odorless  -> model said: rancid/cheesy + sour/acidic + ethereal/solvent
+COC(=O)c1c(N)cccc1,odor,fruity  -> model said: fishy/amine
+O=COC,odor,ethereal/solvent  -> model said: fruity
 [N+](=O)(O)[O-],toxic,high  -> model said: no structural alerts found
 C(CC(=O)O)C(=O)O,odor,odorless  -> model said: rancid/cheesy + sour/acidic

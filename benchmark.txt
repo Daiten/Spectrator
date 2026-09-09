@@ -1,21 +1,45 @@
+#Acid Fuchsin
+CC1=CC(=CC(=C1N)S(=O)(=O)[O-])/C(=C\2/C=CC(=[NH2+])C(=C2)S(=O)(=O)[O-])/C3=CC(=C(C=C3)N)S(=O)(=O)[O-].[Na+].[Na+], color, magenta
+#Black 7984
+[O-]S(C(C=C4)=CC=C4/N=N/C(C=C2)=C3C(C=C(S([O-])(=O)=O)C=C3)=C2/N=N/C1=C(S([O-])(=O)=O)C=C(C=C(S([O-])(=O)=O)C(N)=C5)C5=C1O)(=O)=O.[Na+].[Na+].[Na+].[Na+], color, black
 #Butyric acid
 O=C(O)CCC, acidbase, acid, odor, rancid/cheesy, color, colorless, taste, sour, solubility, soluble 
+#Citral
+O=CC=C(C)CCC=C(C)C, odor, citrus, color, yellow, taste, bitter+sweet
 #Citric acid
 OC(=O)CC(O)(C(=O)O)CC(=O)O, color, colorless, odor, odorless, taste, sour, acidbase, acid, solubility, soluble
+#Codeine
+CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O, psychoactive, yes, color, colorless, taste, bitter, solubility, soluble
+#Dimethyltryptamine
+CN(CCC1=CNC2=C1C=CC=C2)C, psychoactive, yes, toxic, low
+#Disodium guanylate
+C1=NC2=C(N1C3C(C(C(O3)COP(=O)([O-])[O-])O)O)NC(=NC2=O)N.[Na+].[Na+], taste, umami, color, colorless
 #Eicosapentaenoic acid
 O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbase, acid
 #Formic acid
 O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low, color, colorless
+#Geranyl acetate
+O=C(OC/C=C(/CC/C=C(\C)C)C)C, odor, floral+green+waxy, color, colorless, toxic, no, taste, sweet
 #Epigallocatechin gallate
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
+#Humulone
+O=C(\C1=C(/O)\C(=C(\O)[C@](O)(C1=O)C\C=C(/C)C)C\C=C(/C)C)CC(C)C, taste, bitter, acidbase, acid
 #Lactic acid
 CC(O)C(=O)O, acidbase, acid, solubility, soluble, taste, sour, color, colorless, odor, sour
+#Lugduname
+N#Cc1ccc(cc1)N/C(NCC(O)=O)=N\Cc2cccc3OCOc23, taste, sweet
 #Malic acid
 O=C(O)CC(O)C(=O)O, color, colorless, taste, sour, acidbase, acid, solubility, soluble, odor, odorless
+#Methyl anthranilate
+COC(=O)c1c(N)cccc1, odor, fruity, color, colorless, taste, bitter, solubility, slightly soluble
+#Methyl formate
+O=COC, odor, ethereal/solvent, color, colorless
 #Nitric acid
 [N+](=O)(O)[O-], color, colorless, odor, pungent/acrid, acidbase, acid, toxic, high, redox, oxidising
 #Succinic Acid
 C(CC(=O)O)C(=O)O, acidbase, acid, solubility, soluble, odor, odorless, taste, sour, color, colorless
 #Tartaric Acid 
 O=C(O)C(O)C(O)C(=O)O, color, colorless, taste, sour, acidbase, acid, odor, odorless, solubility, soluble
+#Xylitol
+OC[C@@H](O)[C@H](O)[C@@H](O)CO, color, colorless, taste, sweet, solubility, soluble
 
