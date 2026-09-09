@@ -5,7 +5,7 @@ OC(=O)CC(O)(C(=O)O)CC(=O)O, color, colorless, odor, odorless, taste, sour, acidb
 #Eicosapentaenoic acid
 O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbase, acid
 #Formic acid
-O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low
+O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low, color, colorless
 #Epigallocatechin gallate
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
 #Lactic acid
