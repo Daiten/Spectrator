@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Molecular Property Lab v22</title>
+<title>Molecular Property Lab v23</title>
 <style>
 *{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;max-width:1200px;margin:25px auto;padding:0 16px;background:#f3f3f1;color:#202020}h1{margin:0}.sub{color:#666;margin:3px 0 18px}.panel{background:#fff;border:1px solid #ccc;border-radius:13px;padding:17px;margin:14px 0}textarea{width:100%;min-height:78px;padding:10px;border:1px solid #aaa;border-radius:8px;font:15px ui-monospace,monospace}button{font:inherit;padding:7px 11px;border:1px solid #999;border-radius:8px;background:#fafafa;cursor:pointer;margin:4px 3px 0 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card{border:1px solid #ddd;border-radius:9px;padding:10px;background:#fafafa}.big{font-size:1.18rem;font-weight:650}.swatch{height:170px;border-radius:10px;border:1px solid #888;margin-top:10px}canvas{width:100%;height:300px;border:1px solid #bbb;border-radius:9px;background:#fff}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{padding:7px;border-bottom:1px solid #ddd;text-align:left}.small{font-size:.87rem;color:#666}.pass{font-weight:700}.fail{font-weight:700}.warn{color:#8a5a00}.tag{display:inline-block;padding:2px 7px;border:1px solid #bbb;border-radius:99px;margin:2px}.seg{display:inline-flex;border:1px solid #bbb;border-radius:99px;overflow:hidden;background:#fff;vertical-align:middle;margin-left:6px}
 .seg button{font:inherit;font-size:.83rem;margin:0;border:0;border-radius:0;padding:6px 12px;background:#fff;color:#555;cursor:pointer;border-left:1px solid #e2e2e2}
@@ -10,10 +10,10 @@
 .seglabel{font-size:.83rem;color:#777;margin-left:12px;vertical-align:middle}
 .tabs{display:flex;gap:6px;margin:14px 0}.tabbtn{font-weight:650;border-radius:9px;padding:9px 14px}.tabbtn.active{background:#202020;color:#fff;border-color:#202020}.tab{display:none}.tab.active{display:block}.barrow{display:grid;grid-template-columns:150px 1fr 48px;gap:10px;align-items:center;margin:7px 0}.bar{height:12px;border:1px solid #bbb;border-radius:99px;overflow:hidden;background:#eee}.bar>i{display:block;height:100%;background:#777}.odor-note{padding:10px 12px;border:1px solid #ddd;border-radius:9px;background:#fafafa;margin-top:10px}@media(max-width:800px){.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
 </style></head><body>
-<h1>Molecular Property Lab v22</h1><p class="sub">A local, structure-based predictor for colour, odour, taste and bioactivity. Organic predictions are computed from structure with no molecule lookup; inorganic hues use a small explicit reference table of common ions and solids, because d-orbital splitting and band gaps cannot be derived from composition alone. Recognizes aromatic rings whether written in lowercase or Kekule form, and handles disconnected/salt structures.</p>
+<h1>Molecular Property Lab v23</h1><p class="sub">A local, structure-based predictor for colour, odour, taste and bioactivity. Organic predictions are computed from structure with no molecule lookup; inorganic hues use a small explicit reference table of common ions and solids, because d-orbital splitting and band gaps cannot be derived from composition alone. Recognizes aromatic rings whether written in lowercase or Kekule form, and handles disconnected/salt structures.</p>
 <div class="panel"><textarea id="smiles">c1ccc2cc3ccccc3cc2c1</textarea><div>
 <button onclick="predict()">Predict</button><span class="seglabel">read as</span><span class="seg" id="modeSeg"><button data-m="auto" class="on" onclick="setInputMode('auto')">Auto</button><button data-m="smiles" onclick="setInputMode('smiles')">SMILES</button><button data-m="formula" onclick="setInputMode('formula')">Formula</button></span><button onclick="load('benzene')">Benzene</button><button onclick="load('naph')">Naphthalene</button><button onclick="load('anth')">Anthracene</button><button onclick="load('tetra')">Tetracene</button><button onclick="load('hex')">Hexatriene</button><button onclick="load('lyco')">Lycopene</button><button onclick="load('beta')">β-carotene</button><button onclick="load('phth')">Phthalocyanine-like</button><button onclick="load('indigo')">Indigo</button><button onclick="load('caffeine')">Caffeine</button><button onclick="load('serotonin')">Serotonin</button><button onclick="load('nicotine')">Nicotine</button><button onclick="load('aspirin')">Aspirin</button><button onclick="load('glucose')">Glucose</button><button onclick="load('cuso4')">CuSO&#8324;</button><button onclick="load('kmno4')">KMnO&#8324;</button><button onclick="load('h2s')">H&#8322;S</button><button onclick="load('hcl')">HCl</button><button onclick="load('naoh')">NaOH</button><button onclick="load('nahco3')">NaHCO&#8323;</button>
-</div><p class="small">This version separates chromophore detection from optical-color rendering. It is still an approximation, but the benchmark set is used as a regression test.</p></div><div id="interpBanner" style="margin:10px 0"></div><div class="tabs"><button id="tabColor" class="tabbtn active" onclick="showTab('color')">Color Lab</button><button id="tabOdor" class="tabbtn" onclick="showTab('odor')">Odor Lab</button><button id="tabTaste" class="tabbtn" onclick="showTab('taste')">Taste Lab</button><button id="tabBio" class="tabbtn" onclick="showTab('bio')">Bioactivity Lab</button><button id="tabChem" class="tabbtn" onclick="showTab('chem')">Chemistry Lab</button><button id="tabBench" class="tabbtn" onclick="showTab('bench')">Benchmark</button></div>
+</div><p class="small">This version separates chromophore detection from optical-color rendering. It is still an approximation, but the benchmark set is used as a regression test.</p></div><div id="interpBanner" style="margin:10px 0"></div><div class="tabs"><button id="tabColor" class="tabbtn active" onclick="showTab('color')">Color Lab</button><button id="tabOdor" class="tabbtn" onclick="showTab('odor')">Odor Lab</button><button id="tabTaste" class="tabbtn" onclick="showTab('taste')">Taste Lab</button><button id="tabBio" class="tabbtn" onclick="showTab('bio')">Bioactivity Lab</button><button id="tabChem" class="tabbtn" onclick="showTab('chem')">Chemistry Lab</button><button id="tabPhase" class="tabbtn" onclick="showTab('phase')">Phase &amp; Crystal</button><button id="tabBench" class="tabbtn" onclick="showTab('bench')">Benchmark</button></div>
 <div id="colorTab" class="tab active">
 <div class="grid"><section class="panel"><h2>Prediction</h2><div class="cards"><div class="card">λmax<div class="big" id="lam">—</div></div><div class="card">Color<div class="big" id="col">—</div></div><div class="card">π atoms<div class="big" id="npi">—</div></div><div class="card">Confidence<div class="big" id="conf">—</div></div></div><div class="swatch" id="swatch"></div><p><b>HEX:</b> <code id="hex">—</code></p><p id="summary">—</p></section>
 <section class="panel"><h2>Structure & electronic estimate</h2><div id="electronic">—</div><p id="features"></p><p id="warnings"></p></section></div>
@@ -66,6 +66,14 @@
 <div class="panel"><h2>Failures</h2><p class="small">Each failure shows the rule that produced the answer, so a wrong prediction points at the responsible logic rather than just being wrong.</p><table><thead><tr><th>Input</th><th>Property</th><th>Expected</th><th>Model said</th><th>Rule that fired</th></tr></thead><tbody id="benchFails"></tbody></table></div>
 <div class="panel"><h2>How to use this well</h2><p class="small">Collect discrepancies in batches of twenty or more before acting on them: nearly every real bug found in this project affected a whole class of compounds, and a batch makes the pattern visible where a single case invites an over-fitted patch. Include compounds the model gets <b>right</b> as well — knowing that eight esters pass and two fail is far more diagnostic than two failures alone. Prefer pairs that differ in one feature (hexanal against octanal, anthraquinone against its amino derivative) since those locate a boundary, and be wary of tuning until this number rises: an accuracy figure that only improves on the rows in this box is measuring memorisation, not prediction.</p></div>
 </div>
+<div id="phaseTab" class="tab">
+<div class="grid"><section class="panel"><h2>Phase at room temperature</h2><div class="cards"><div class="card">Phase at 25&nbsp;&deg;C, 1&nbsp;atm<div class="big" id="phState">&mdash;</div></div><div class="card">Confidence<div class="big" id="phConf">&mdash;</div></div></div><div id="phBars" style="margin-top:12px"></div><p id="phWhy">&mdash;</p><div id="phNotes"></div></section>
+<section class="panel"><h2>Estimated transition temperatures</h2><div id="phTemps">&mdash;</div><p class="small">Boiling points come from Joback group contributions and are typically good to about 15&nbsp;K. Melting points are the weak part of the method &mdash; melting depends on how molecules pack in the crystal, which an additive scheme cannot see &mdash; so a solid/liquid call near room temperature is flagged as uncertain rather than asserted.</p></section></div>
+<div class="grid"><section class="panel"><h2>Crystal structure</h2><div class="cards"><div class="card">Class<div class="big" id="crKind">&mdash;</div></div><div class="card">System<div class="big" id="crSystem">&mdash;</div></div></div><p id="crType">&mdash;</p><div id="crNotes"></div></section>
+<section class="panel"><h2>What can and cannot be predicted here</h2><p class="small">For a <b>simple binary ionic solid</b> the radius-ratio rule is a real structural predictor: the ratio of ionic radii sets the coordination number, and that plus the stoichiometry gives the structure type. It is right for perhaps two thirds of cases on its own, and two well-known systematic failures are corrected explicitly &mdash; soft polarisable cations with heavy chalcogenides go tetrahedral through covalency, and the caesium chloride structure is far rarer than the classical cut-off implies.</p><p class="small">For a <b>molecular (organic) crystal</b> no honest prediction is possible from a connection table. Packing is decided by three-dimensional shape and intermolecular contacts that a 2D structure does not contain; dedicated crystal-structure-prediction codes with very large compute budgets still fail regularly, and polymorphism means many compounds have several correct answers at once. What this panel gives instead is a <b>hard symmetry constraint</b> where one exists &mdash; an enantiopure chiral molecule cannot adopt a centrosymmetric space group, since an inversion centre would demand the opposite enantiomer &mdash; together with base rates over known structures, clearly labelled as base rates.</p></section></div>
+<div class="panel"><h2>Phase validation mode</h2><table><thead><tr><th>Compound</th><th>Expected</th><th>Model</th><th>Test</th></tr></thead><tbody id="phaseValidation"></tbody></table></div>
+</div>
+
 
 
 
@@ -2078,6 +2086,293 @@ function doBenchmark(){
     `<tr><td><code>${(f.name?f.name+'<br>':'')}${f.input.length>26?f.input.substring(0,26)+'…':f.input}</code></td><td>${f.property}</td><td>${f.expected}</td><td>${f.got}</td><td class="small">${f.why||''}</td></tr>`
   ).join('')||'<tr><td colspan="5" class="small">No failures.</td></tr>';
 }
+
+// ==================== Phase at STP ====================
+// Boiling and melting points are estimated with Joback group contributions, the standard additive
+// method: Tb = 198.2 + sum of group terms, Tm = 122.5 + sum. Boiling points come out good to
+// roughly 15 K, which is ample for deciding gas/liquid/solid. Melting points are much weaker
+// (Joback's own Tm term is the least reliable part of the method) because melting depends on
+// crystal packing, so the model leans on Tb wherever it can and says when a call is marginal.
+const JB={
+ // [Tb contribution, Tm contribution]
+ CH3:[23.58,-5.10], CH2:[22.88,11.27], CH:[21.74,12.64], C:[18.25,46.43],
+ eCH2:[18.18,-4.32], eCH:[24.96,8.73], eC:[24.14,11.14], tCH:[24.02,-0.03], tC:[26.15,17.78],
+ rCH2:[27.15,7.75], rCH:[21.78,19.88], rC:[21.32,60.15],
+ aCH:[26.73,8.13], aC:[31.01,37.02],
+ F:[-0.03,-15.78], Cl:[38.13,13.55], Br:[66.86,43.43], I:[93.84,41.69],
+ OH:[92.88,44.45], OHph:[76.34,82.83], O:[22.42,22.23], Or:[31.22,23.05],
+ CO:[76.75,61.20], COr:[94.97,75.97], CHO:[72.24,36.90], COOH:[169.09,155.50], COO:[81.10,53.60],
+ NH2:[73.23,66.89], NH:[50.17,52.66], NHr:[52.82,101.51], N:[11.74,48.84], Nr:[57.55,68.40],
+ CN:[125.66,59.89], NO2:[152.54,127.24],
+ SH:[63.56,20.09], S:[68.78,34.40], Sr:[52.10,79.93], P:[34.0,40.0]
+};
+function jobackGroups(d){
+  const A=d._A, adj=buildAdj(d), g={};
+  const add=k=>{ g[k]=(g[k]||0)+1; };
+  let fullRing=new Set();
+  try{ fullRing=ringPiAtoms([...Array(A.length).keys()],d.B).atoms; }catch(e){}
+  const isC=i=>A[i].sym==='C', isO=i=>A[i].sym==='O', isN=i=>A[i].sym==='N', isS=i=>A[i].sym==='S';
+  const carbonylC=i=>isC(i)&&(adj.get(i)||[]).some(x=>x.o===2&&isO(x.to));
+  for(let i=0;i<A.length;i++){
+    const s=A[i].sym, nb=adj.get(i)||[], h=implicitH(d,i), ring=fullRing.has(i), ar=A[i].ar;
+    if(s==='C'){
+      if(carbonylC(i)){
+        const sO=nb.filter(x=>x.o<2&&isO(x.to));
+        const sN=nb.filter(x=>x.o<2&&isN(x.to));
+        const cN=nb.filter(x=>x.o<2&&isC(x.to));
+        if(sO.length){ const o=sO[0].to; ((adj.get(o)||[]).length>=2)?add('COO'):add('COOH'); }
+        else if(sN.length){ add('COr'); }
+        else if(cN.length>=2){ ring?add('COr'):add('CO'); }
+        else add('CHO');
+        continue;
+      }
+      if(ar){ h>=1?add('aCH'):add('aC'); continue; }
+      const trip=nb.some(x=>x.o===3), dbl=nb.some(x=>x.o===2);
+      if(trip){ h>=1?add('tCH'):add('tC'); continue; }
+      if(dbl){ if(h>=2)add('eCH2'); else if(h===1)add('eCH'); else add('eC'); continue; }
+      if(ring){ if(h>=2)add('rCH2'); else if(h===1)add('rCH'); else add('rC'); continue; }
+      if(h>=3)add('CH3'); else if(h===2)add('CH2'); else if(h===1)add('CH'); else add('C');
+      continue;
+    }
+    if(s==='O'){
+      if(nb.some(x=>carbonylC(x.to))) continue;              // already counted in COOH/COO/CO
+      if(nb.length===1&&nb[0].o===1){ A[nb[0].to].ar?add('OHph'):add('OH'); continue; }
+      if(nb.length>=2){ ring?add('Or'):add('O'); continue; }
+      continue;
+    }
+    if(s==='N'){
+      const oCount=nb.filter(x=>isO(x.to)).length;
+      if(oCount>=2){ add('NO2'); continue; }
+      if(nb.some(x=>x.o===3)){ add('CN'); continue; }
+      if(ar||ring){ h>=1?add('NHr'):add('Nr'); continue; }
+      if(h>=2)add('NH2'); else if(h===1)add('NH'); else add('N');
+      continue;
+    }
+    if(s==='S'){ if(nb.length<=1)add('SH'); else ring?add('Sr'):add('S'); continue; }
+    if(s==='P'){ add('P'); continue; }
+    if(['F','Cl','Br','I'].includes(s)) add(s);
+  }
+  return g;
+}
+function jobackTemps(d){
+  const g=jobackGroups(d);
+  let tb=198.2, tm=122.5, n=0;
+  for(const k in g){ if(!JB[k]) continue; tb+=JB[k][0]*g[k]; tm+=JB[k][1]*g[k]; n+=g[k]; }
+  // Joback treats melting additively and so misses the effect of molecular SHAPE. Flat, rigid,
+  // symmetric molecules stack efficiently in the crystal and melt far higher than an additive sum
+  // predicts: naphthalene melts at 353 K where the raw sum gives 262. Add a packing term for each
+  // aromatic ring beyond the first.
+  let aromRings=0;
+  try{ aromRings=smallRings(d).filter(r=>r.aromatic&&r.size>=5&&r.size<=6).length; }catch(e){}
+  if(aromRings>=2) tm += 45*(aromRings-1);
+  return {tb,tm,groups:g,n,aromRings};
+}
+const NOBLE=['He','Ne','Ar','Kr','Xe','Rn'];
+// Small molecular inorganics are not organic-group compounds, so Joback does not apply. These are
+// reference boiling/melting points in kelvin for the common ones.
+const INORG_PHASE={
+ 'H2O':[373,273],'H2S':[213,187],'NH3':[240,195],'CO2':[195,195],'CO':[82,68],'SO2':[263,201],
+ 'SO3':[318,290],'NO':[121,109],'NO2':[294,262],'N2O':[185,182],'O2':[90,54],'N2':[77,63],'H2':[20,14],
+ 'Cl2':[239,172],'F2':[85,53],'Br2':[332,266],'I2':[457,387],'O3':[161,81],'HCl':[188,159],'HF':[293,190],
+ 'HBr':[207,186],'HI':[238,222],'HCN':[299,260],'PH3':[185,140],'SiH4':[161,88],'CH4':[112,91],
+ 'H2O2':[423,272],'N2H4':[387,275],'CS2':[319,161],'SF6':[209,222],'COCl2':[281,145],'H2SO4':[610,283],
+ 'HNO3':[356,231],'SeO2':[588,613],'B2H6':[181,108],'AsH3':[211,157],'H2Se':[232,207],'ClO2':[284,214]
+};
+function phaseProfile(d){
+  const A=d._A;
+  const heavy=A.filter(a=>a.sym!=='H').length;
+  const io=(typeof inorganicProfile==='function')?inorganicProfile(d):null;
+  const notes=[];
+  // --- noble gases and diatomic elements ---
+  if(io){
+    const key=io.empirical, raw=io.formula;
+    const ref=INORG_PHASE[raw]||INORG_PHASE[key];
+    if(A.every(a=>NOBLE.includes(a.sym))&&A.length) return {phase:'gas',tb:null,tm:null,confidence:'high',
+      why:['a noble gas: monatomic with only weak dispersion forces, so it condenses far below room temperature'],notes};
+    if(ref) return {phase: ref[0]<298?'gas':(ref[1]<298?'liquid':'solid'), tb:ref[0], tm:ref[1], confidence:'high',
+      why:['a small molecular inorganic species with well-established transition temperatures'],notes};
+    if(io.hasMetal){
+      const mercury=io.comp.Hg&&Object.keys(io.comp).length===1;
+      if(mercury) return {phase:'liquid',tb:630,tm:234,confidence:'high',why:['mercury is the one metal that is liquid at room temperature'],notes};
+      return {phase:'solid',tb:null,tm:null,confidence:'high',
+        why:['an ionic or metallic solid: the lattice is held by electrostatic or metallic bonding, far stronger than any molecular force, so it is solid at room temperature'],notes};
+    }
+  }
+  if(!heavy) return {phase:'unknown',tb:null,tm:null,confidence:'low',why:['nothing to analyse'],notes};
+  // --- organic molecules via Joback ---
+  const {tb,tm,n}=jobackTemps(d);
+  if(!n) return {phase:'unknown',tb:null,tm:null,confidence:'low',why:['no recognisable groups for the group-contribution model'],notes};
+  const fg=functionalGroups(d);
+  const ionic=A.some(a=>a.chg&&a.chg!==0);
+  let phase, why=[], confidence;
+  if(ionic){
+    phase='solid'; confidence='moderate';
+    why.push('a charged (salt-like) species: ionic interactions dominate, giving a non-volatile solid');
+  } else if(tb<298){
+    phase='gas'; confidence='moderate';
+    why.push('estimated boiling point of about '+Math.round(tb)+' K, below room temperature');
+  } else if(tm>298){
+    phase='solid'; confidence=(tm-298)>40?'moderate':'low';
+    why.push('estimated melting point of about '+Math.round(tm)+' K, above room temperature');
+  } else {
+    phase='liquid'; confidence=(298-tm)>30&&(tb-298)>30?'moderate':'low';
+    why.push('estimated melting point about '+Math.round(tm)+' K and boiling point about '+Math.round(tb)+' K, placing room temperature between them');
+  }
+  // Melting-point estimates are the weak part of the method, so flag the marginal calls.
+  if(Math.abs(tm-298)<25) notes.push('the melting-point estimate is within 25 K of room temperature, and Joback melting points are the least reliable part of the method - treat the solid/liquid call here as genuinely uncertain');
+  if(Math.abs(tb-298)<25) notes.push('the boiling-point estimate is close to room temperature, so the liquid/gas call is marginal');
+  if(fg.acids>=2||fg.alcohols>=3) notes.push('extensive hydrogen bonding raises the real melting point above what an additive model predicts, so a solid call here is if anything understated');
+  return {phase,tb,tm,confidence,why,notes};
+}
+
+// ==================== Crystal structure ====================
+// This is the part of the app where honesty matters most. For SIMPLE IONIC solids the radius-ratio
+// rule really does predict the structure type from composition, and it gets the textbook cases
+// right. For MOLECULAR (organic) crystals, packing depends on three-dimensional shape and
+// intermolecular geometry that a 2D graph does not contain - dedicated crystal-structure-prediction
+// software with large compute budgets still gets these wrong, and polymorphism means one compound
+// may have several correct answers. So for molecular solids this reports base rates and hard
+// symmetry constraints rather than pretending to predict a structure.
+const IONIC_RADIUS={
+ Li:76,Na:102,K:138,Rb:152,Cs:167,Mg:72,Ca:100,Sr:118,Ba:135,Al:54,
+ Zn:74,Cu:73,Fe:65,Mn:83,Ni:69,Co:75,Cr:62,Ti:61,Ag:115,Cd:95,Pb:119,Hg:102,Sn:69,
+ F:133,Cl:181,Br:196,I:220,O:140,S:184,Se:198
+};
+const RADIUS_RULES=[
+ {min:0,    max:0.155, cn:2, geom:'linear'},
+ {min:0.155,max:0.225, cn:3, geom:'trigonal planar'},
+ {min:0.225,max:0.414, cn:4, geom:'tetrahedral'},
+ {min:0.414,max:0.732, cn:6, geom:'octahedral'},
+ {min:0.732,max:99,    cn:8, geom:'cubic (eight-coordinate)'}
+];
+// Does the molecule carry a stereocentre? A chiral molecule cannot crystallise in a centrosymmetric
+// space group - it is physically impossible for a structure to contain an inversion centre or mirror
+// if the molecule has no mirror image present. That is a hard constraint, not a statistical guess,
+// and it is genuinely derivable from the SMILES stereo markers.
+function hasStereoMarker(smiles){ return /@/.test(smiles||''); }
+function crystalProfile(d,smiles){
+  const io=(typeof inorganicProfile==='function')?inorganicProfile(d):null;
+  const out={kind:null,system:null,type:null,cn:null,ratio:null,notes:[],confidence:'low'};
+  // ---- simple binary ionic solids ----
+  if(io&&io.hasMetal){
+    const c=io.empirical?parseFormulaString(io.empirical)||io.comp:io.comp;
+    const cation=Object.keys(c).find(e=>METAL_GROUP[e]||MAIN_METALS.includes(e));
+    const anion=Object.keys(c).find(e=>['F','Cl','Br','I','O','S','Se'].includes(e));
+    const others=Object.keys(c).filter(e=>e!==cation&&e!==anion);
+    if(cation&&anion&&!others.length&&IONIC_RADIUS[cation]&&IONIC_RADIUS[anion]){
+      const rc=IONIC_RADIUS[cation], ra=IONIC_RADIUS[anion], ratio=rc/ra;
+      const rule=RADIUS_RULES.find(r=>ratio>=r.min&&ratio<r.max)||RADIUS_RULES[RADIUS_RULES.length-1];
+      const nC=c[cation], nA=c[anion];
+      let type,system,cn=rule.cn;
+      // Two well-known systematic failures of the bare radius-ratio rule, corrected here:
+      // (1) Soft, polarisable d10 cations with heavy chalcogenides bond with strong covalent
+      //     character, which favours four-coordinate tetrahedral packing whatever the size ratio
+      //     says. This is why CdS and ZnS are blende/wurtzite rather than rock salt.
+      const softCation=['Zn','Cd','Hg','Cu','Ag'].includes(cation);
+      const tetraOxide=['Zn','Be'].includes(cation)&&anion==='O';
+      if(((softCation&&['S','Se'].includes(anion))||tetraOxide)&&cn>4){ cn=4;
+        out.notes.push('the size ratio alone suggests higher coordination, but a soft polarisable cation with a heavy chalcogenide bonds with marked covalent character, which favours tetrahedral coordination'); }
+      // (2) The rule over-predicts the caesium chloride structure badly. In practice essentially
+      //     only the caesium halides adopt it at ambient pressure; potassium chloride and barium
+      //     oxide both sit above the 0.732 cut-off yet are rock salt.
+      if(cn===8&&!(cation==='Cs'||(ratio>0.9&&['Cl','Br','I'].includes(anion)))){ cn=6;
+        out.notes.push('the ratio exceeds the classical 0.732 cut-off, but the caesium chloride structure is rare in practice - it is essentially confined to the caesium halides - so rock salt is the better call here'); }
+      if(nC===nA){
+        if(cn===8){ type='caesium chloride type'; system='cubic'; }
+        else if(cn===6){ type='rock salt type'; system='cubic'; }
+        else if(cn===4){ type='zinc blende or wurtzite type'; system='cubic or hexagonal'; }
+        else { type='low-coordination chain or layer structure'; system='low symmetry'; }
+      } else if(nA===2*nC){
+        if(cn>=8||ratio>=0.7){ type='fluorite type'; system='cubic'; }
+        else if(cn===6){ type='rutile type'; system='tetragonal'; }
+        else { type='layered or molecular structure'; system='low symmetry'; }
+      } else if(nC===2*nA){ type='antifluorite type'; system='cubic'; }
+      else { type='more complex stoichiometry - not covered by the simple rules'; system=null; }
+      out.kind='ionic'; out.system=system; out.type=type; out.cn=cn; out.ratio=ratio;
+      out.confidence=(cn===6||cn===8)?'moderate':'low';
+      out.notes.push('radius ratio '+ratio.toFixed(3)+' ('+cation+' '+rc+' pm over '+anion+' '+ra+' pm) implies '+rule.cn+'-coordinate '+rule.geom+' geometry'+(cn!==rule.cn?', adjusted to '+cn+'-coordinate below':''));
+      out.notes.push('the radius-ratio rule is a genuine structural predictor but it is only a guide: it picks the right structure type for perhaps two-thirds of simple ionic solids, and covalent character, polarisability and temperature can all override it');
+      return out;
+    }
+    out.kind='ionic'; out.confidence='low';
+    out.notes.push('an ionic solid, but not a simple binary compound of two ions with tabulated radii, so the radius-ratio rule does not apply here');
+    return out;
+  }
+  if(io){
+    out.kind='molecular/covalent inorganic'; out.confidence='low';
+    out.notes.push('a covalent inorganic species; its solid form is a molecular crystal whose packing is not derivable from composition alone');
+    return out;
+  }
+  // ---- molecular (organic) crystals ----
+  out.kind='molecular (organic)';
+  const chiral=hasStereoMarker(smiles);
+  if(chiral){
+    out.system='must be a Sohncke (non-centrosymmetric) group';
+    out.notes.push('the structure carries stereochemistry, so if it is enantiopure it CANNOT crystallise in a centrosymmetric space group - an inversion centre or mirror plane would generate the opposite enantiomer, which is not present. This is a hard constraint rather than a statistical tendency.');
+    out.notes.push('enantiopure organic crystals are dominated by P2\u20811 2\u20811 2\u20811 and P2\u20811, which between them account for roughly three quarters of them');
+    out.confidence='moderate';
+  } else {
+    out.system='most likely monoclinic or triclinic';
+    out.notes.push('achiral organic molecules overwhelmingly crystallise in a handful of centrosymmetric groups: P2\u20811/c alone accounts for about a third of all known organic structures, and P2\u20811/c, P-1, P2\u20811 2\u20811 2\u20811 and C2/c together for roughly seven in ten');
+    out.confidence='low';
+  }
+  out.notes.push('this is a base rate over known structures, not a prediction for this molecule: crystal packing depends on three-dimensional shape and intermolecular contacts that a connection table does not contain, and many compounds are polymorphic and so have several correct answers at once');
+  return out;
+}
+function renderPhase(a){
+  const raw=document.getElementById('smiles').value;
+  const p=phaseProfile(a.d), c=crystalProfile(a.d,raw);
+  document.getElementById('phState').textContent=p.phase;
+  document.getElementById('phConf').textContent=p.confidence;
+  document.getElementById('phWhy').innerHTML=p.why.join('; ')+'.';
+  document.getElementById('phNotes').innerHTML=p.notes.length?p.notes.map(n=>'<div class="odor-note small">'+n+'</div>').join(''):'';
+  const K=v=>v?Math.round(v)+' K ('+Math.round(v-273.15)+' &deg;C)':'not applicable';
+  document.getElementById('phTemps').innerHTML=`Estimated melting point: <b>${K(p.tm)}</b><br>Estimated boiling point: <b>${K(p.tb)}</b><br>Room temperature for reference: <b>298 K (25 &deg;C)</b>`;
+  if(p.tm&&p.tb){
+    const scale=t=>Math.max(0,Math.min(100,(t-100)/600*100));
+    document.getElementById('phBars').innerHTML=
+      `<div class="barrow"><span>melting point</span><div class="bar"><i style="width:${scale(p.tm)}%"></i></div><span>${Math.round(p.tm)}K</span></div>`+
+      `<div class="barrow"><span>room temperature</span><div class="bar"><i style="width:${scale(298)}%"></i></div><span>298K</span></div>`+
+      `<div class="barrow"><span>boiling point</span><div class="bar"><i style="width:${scale(p.tb)}%"></i></div><span>${Math.round(p.tb)}K</span></div>`;
+  } else document.getElementById('phBars').innerHTML='';
+  document.getElementById('crKind').textContent=c.kind||'unknown';
+  document.getElementById('crSystem').textContent=c.system||'not determined';
+  document.getElementById('crType').innerHTML=c.type?('Predicted structure type: <b>'+c.type+'</b>'+(c.cn?' with <b>'+c.cn+'-coordinate</b> geometry':'')):'';
+  document.getElementById('crNotes').innerHTML=c.notes.map(n=>'<div class="odor-note small">'+n+'</div>').join('');
+}
+function validatePhase(){
+ let tests=[
+  ['Methane','C','gas'],['Ethane','CC','gas'],['Butane','CCCC','gas'],['Ammonia','NH3','gas'],
+  ['Carbon dioxide','CO2','gas'],['Hydrogen sulfide','H2S','gas'],
+  ['Pentane','CCCCC','liquid'],['Hexane','CCCCCC','liquid'],['Ethanol','CCO','liquid'],['Water','H2O','liquid'],
+  ['Benzene','c1ccccc1','liquid'],['Toluene','Cc1ccccc1','liquid'],['Acetone','CC(=O)C','liquid'],
+  ['Acetic acid','CC(=O)O','liquid'],['Glycerol','OCC(O)CO','liquid'],['Aniline','Nc1ccccc1','liquid'],
+  ['Limonene','CC1=CCC(CC1)C(=C)C','liquid'],['Mercury','Hg','liquid'],
+  ['Naphthalene','c1ccc2ccccc2c1','solid'],['Anthracene','c1ccc2cc3ccccc3cc2c1','solid'],
+  ['Biphenyl','c1ccccc1-c1ccccc1','solid'],['Benzoic acid','OC(=O)c1ccccc1','solid'],
+  ['Stearic acid','CCCCCCCCCCCCCCCCCC(=O)O','solid'],['Glucose','OCC(O)C(O)C(O)C(O)C=O','solid'],
+  ['Caffeine','Cn1cnc2c1c(=O)n(C)c(=O)n2C','solid'],['Urea','NC(=O)N','solid'],
+  ['Vanillin','COc1cc(C=O)ccc1O','solid'],['Citric acid','OC(=O)CC(O)(C(=O)O)CC(=O)O','solid'],
+  ['Sodium chloride','NaCl','solid'],['Copper sulfate','CuSO4','solid'],
+ ];
+ let rows='';
+ for(const[n,s,exp]of tests){
+  const p=phaseProfile(analyse(s).d);
+  const ok=p.phase===exp;
+  rows+=`<tr><td>${n}</td><td>${exp}</td><td>${p.phase}${p.tb?' <span class="small">(Tb~'+Math.round(p.tb)+'K)</span>':''}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ // Crystal-structure checks, confined to simple ionic solids where the radius-ratio rule applies.
+ const cr=[['Sodium chloride','NaCl','rock salt'],['Potassium chloride','KCl','rock salt'],['Magnesium oxide','MgO','rock salt'],
+  ['Caesium chloride','CsCl','caesium'],['Caesium iodide','CsI','caesium'],['Zinc sulfide','ZnS','zinc blende'],
+  ['Cadmium sulfide','CdS','zinc blende'],['Zinc oxide','ZnO','zinc blende'],['Calcium fluoride','CaF2','fluorite'],
+  ['Titanium dioxide','TiO2','rutile'],['Barium oxide','BaO','rock salt'],['Lithium fluoride','LiF','rock salt']];
+ for(const[n,f,exp]of cr){
+  const c=crystalProfile(analyse(f).d,f);
+  const ok=String(c.type||'').toLowerCase().includes(exp.split(' ')[0]);
+  rows+=`<tr><td>${n} <span class="small">(structure type)</span></td><td>${exp}</td><td>${c.type||'-'}</td><td class="${ok?'pass':'fail'}">${ok?'PASS':'FAIL'}</td></tr>`;
+ }
+ document.getElementById('phaseValidation').innerHTML=rows;
+}
 function renderChem(a){
   const c=chemProfile(a.d), pc=c.pc;
   document.getElementById('chemAB').textContent=c.acidBase;
@@ -2120,16 +2415,19 @@ function showTab(name){
  document.getElementById('bioTab').classList.toggle('active',name==='bio');
  document.getElementById('chemTab').classList.toggle('active',name==='chem');
  document.getElementById('benchTab').classList.toggle('active',name==='bench');
+ document.getElementById('phaseTab').classList.toggle('active',name==='phase');
  document.getElementById('tabColor').classList.toggle('active',name==='color');
  document.getElementById('tabOdor').classList.toggle('active',name==='odor');
  document.getElementById('tabTaste').classList.toggle('active',name==='taste');
  document.getElementById('tabBio').classList.toggle('active',name==='bio');
  document.getElementById('tabChem').classList.toggle('active',name==='chem');
  document.getElementById('tabBench').classList.toggle('active',name==='bench');
+ document.getElementById('tabPhase').classList.toggle('active',name==='phase');
  if(name==='odor') renderOdor(analyse(document.getElementById('smiles').value));
  if(name==='taste') renderTaste(analyse(document.getElementById('smiles').value));
  if(name==='bio') renderBio(analyse(document.getElementById('smiles').value));
  if(name==='chem') renderChem(analyse(document.getElementById('smiles').value));
+ if(name==='phase') renderPhase(analyse(document.getElementById('smiles').value));
 }
 
 // ==================== Inorganic engine ====================
@@ -2632,7 +2930,7 @@ function predict(){let a=analyse(document.getElementById('smiles').value);render
 // swatch (correctly) was not displaying.
 document.getElementById('hex').textContent=a.visible?hx(a.rgb):'n/a (colorless)';document.getElementById('swatch').style.background=a.visible?hx(a.rgb):'#f8f8f8';document.getElementById('summary').innerHTML=a.inorg
   ?`Inorganic species <b>${a.inorg.formula}</b>; predicted appearance: <b>${a.col}</b>.<br><span class="small">${a.inorg.colorWhy||''}</span>`
-  :`Detected <b>${a.t.kind}</b>. Approximate strongest transition: <b>${Math.round(a.t.lam)} nm</b>; predicted appearance: <b>${a.col}</b>.`;document.getElementById('electronic').innerHTML=a.inorg?(function(){const io=a.inorg;const oxs=io.ox?`${io.ox.metal}(${io.ox.ox>0?'+':''}${io.ox.ox})${io.ox.anion?' as '+io.ox.anion:''}`:'no metal centre';return `<b>Interpreted as an inorganic species${a.formulaMode?' (formula input)':''}.</b><br>Formula: <b>${io.formula}</b>${io.empirical!==io.formula?' (empirical '+io.empirical+')':''}<br>Metal centre: <b>${oxs}</b><br>d-electron count: <b>${io.dCount===null?'not applicable':'d'+io.dCount}</b><br>Predicted appearance: <b>${io.color||'unknown'}</b> <span class="tag">${io.certainty==='reference'?'from reference table':io.certainty==='principled'?'reasoned, hue uncertain':'not determined'}</span><br><span class="small">${io.colorWhy||''}</span><br><br><span class="small">Inorganic hues come from a small explicit reference table of common species rather than being computed: d-orbital splitting depends on the real ligand field and band gaps on the solid-state lattice, neither of which follows from composition alone.</span>`})():`Atoms: <b>${a.g.A.length}</b><br>π atoms: <b>${a.d.ids.length}</b><br>Double bonds: <b>${a.d.db}</b><br>Ring-conjugated (aromatic) atoms: <b>${a.d.ar}</b> · in largest single fused ring system: <b>${a.d.coreAr}</b> (${a.d.coreR} ring${a.d.coreR===1?'':'s'})<br>π-network ring rank: <b>${a.d.r}</b><br>Longest π-path: <b>${a.d.longest}</b><br>Strong-band estimate: <b>${a.t.str.toFixed(2)}</b>`;document.getElementById('features').innerHTML=`N: ${a.d.N} · O: ${a.d.O} · S: ${a.d.S} · halogens: ${a.d.hal} · π components: ${a.d.components.join(', ')||'none'}`;document.getElementById('warnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';draw(a.sp);renderOdor(a);renderTaste(a);renderBio(a);renderChem(a);}
+  :`Detected <b>${a.t.kind}</b>. Approximate strongest transition: <b>${Math.round(a.t.lam)} nm</b>; predicted appearance: <b>${a.col}</b>.`;document.getElementById('electronic').innerHTML=a.inorg?(function(){const io=a.inorg;const oxs=io.ox?`${io.ox.metal}(${io.ox.ox>0?'+':''}${io.ox.ox})${io.ox.anion?' as '+io.ox.anion:''}`:'no metal centre';return `<b>Interpreted as an inorganic species${a.formulaMode?' (formula input)':''}.</b><br>Formula: <b>${io.formula}</b>${io.empirical!==io.formula?' (empirical '+io.empirical+')':''}<br>Metal centre: <b>${oxs}</b><br>d-electron count: <b>${io.dCount===null?'not applicable':'d'+io.dCount}</b><br>Predicted appearance: <b>${io.color||'unknown'}</b> <span class="tag">${io.certainty==='reference'?'from reference table':io.certainty==='principled'?'reasoned, hue uncertain':'not determined'}</span><br><span class="small">${io.colorWhy||''}</span><br><br><span class="small">Inorganic hues come from a small explicit reference table of common species rather than being computed: d-orbital splitting depends on the real ligand field and band gaps on the solid-state lattice, neither of which follows from composition alone.</span>`})():`Atoms: <b>${a.g.A.length}</b><br>π atoms: <b>${a.d.ids.length}</b><br>Double bonds: <b>${a.d.db}</b><br>Ring-conjugated (aromatic) atoms: <b>${a.d.ar}</b> · in largest single fused ring system: <b>${a.d.coreAr}</b> (${a.d.coreR} ring${a.d.coreR===1?'':'s'})<br>π-network ring rank: <b>${a.d.r}</b><br>Longest π-path: <b>${a.d.longest}</b><br>Strong-band estimate: <b>${a.t.str.toFixed(2)}</b>`;document.getElementById('features').innerHTML=`N: ${a.d.N} · O: ${a.d.O} · S: ${a.d.S} · halogens: ${a.d.hal} · π components: ${a.d.components.join(', ')||'none'}`;document.getElementById('warnings').innerHTML=a.g.warn.length?'<span class="warn">Parser warnings: '+a.g.warn.join('; ')+'</span>':'';draw(a.sp);renderOdor(a);renderTaste(a);renderBio(a);renderChem(a);renderPhase(a);}
 function load(k){document.getElementById('smiles').value=EX[k];predict()}
 function validate(){
  let tests=[
@@ -2930,5 +3228,5 @@ function validateInterp(){
  document.getElementById('interpValidation').innerHTML=rows;
  INPUT_MODE=save;
 }
-predict();validate();validateOdor();validateTaste();validateBio();validateInorg();validateChem();validateInterp();loadBenchSeed();
+predict();validate();validateOdor();validateTaste();validateBio();validateInorg();validateChem();validateInterp();validatePhase();loadBenchSeed();
 </script></body></html>
