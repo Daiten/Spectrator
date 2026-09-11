@@ -18,6 +18,8 @@ CN(CCC1=CNC2=C1C=CC=C2)C, psychoactive, yes, toxic, low
 C1=NC2=C(N1C3C(C(C(O3)COP(=O)([O-])[O-])O)O)NC(=NC2=O)N.[Na+].[Na+], taste, umami, color, colorless
 #Eicosapentaenoic acid
 O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbase, acid
+#Ethanol
+OCC, psychoactive, yes, color, colorless, odor, ethereal/solvent
 #Formic acid
 O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low, color, colorless
 #Geranyl acetate
@@ -40,6 +42,8 @@ COC(=O)c1c(N)cccc1, odor, fruity, color, colorless, taste, bitter, solubility, s
 O=COC, odor, ethereal/solvent, color, colorless
 #Nitric acid
 [N+](=O)(O)[O-], color, colorless, odor, pungent/acrid, acidbase, acid, toxic, high, redox, oxidising
+#Piracetam
+O=C1N(CC(=O)N)CCC1, psychoactive, yes
 #Succinic Acid
 C(CC(=O)O)C(=O)O, acidbase, acid, solubility, soluble, odor, odorless, taste, sour, color, colorless
 #Tartaric Acid 
