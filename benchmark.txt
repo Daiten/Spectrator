@@ -20,6 +20,8 @@ O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbas
 O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low, color, colorless
 #Geranyl acetate
 O=C(OC/C=C(/CC/C=C(\C)C)C)C, odor, floral+green+waxy, color, colorless, toxic, no, taste, sweet
+#GHB
+O=C(O)CCCO, psychoactive, yes, toxic, medium
 #Epigallocatechin gallate
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
 #Humulone
