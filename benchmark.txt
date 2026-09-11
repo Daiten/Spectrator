@@ -2,6 +2,8 @@
 CC1=CC(=CC(=C1N)S(=O)(=O)[O-])/C(=C\2/C=CC(=[NH2+])C(=C2)S(=O)(=O)[O-])/C3=CC(=C(C=C3)N)S(=O)(=O)[O-].[Na+].[Na+], color, magenta
 #Atropine
 CN3[C@H]1CC[C@@H]3C[C@@H](C1)OC(=O)C(CO)c2ccccc2, psychoactive, yes
+#Biotin
+O=C1N[C@@H]2[C@@H](SC[C@@H]2N1)CCCCC(=O)O, color, colorless, solubility, soluble
 #Black 7984
 [O-]S(C(C=C4)=CC=C4/N=N/C(C=C2)=C3C(C=C(S([O-])(=O)=O)C=C3)=C2/N=N/C1=C(S([O-])(=O)=O)C=C(C=C(S([O-])(=O)=O)C(N)=C5)C5=C1O)(=O)=O.[Na+].[Na+].[Na+].[Na+], color, black
 #Butyric acid
