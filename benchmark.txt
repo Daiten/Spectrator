@@ -24,6 +24,8 @@ O=C(O)CCC\C=C/C\C=C/C\C=C/C\C=C/C\C=C/CC, color, colorless, odor, fishy, acidbas
 OCC, psychoactive, yes, color, colorless, odor, ethereal/solvent
 #Formic acid
 O=CO, odor, pungent, solubility, soluble, acidbase, acid, redox, reducing, toxic, low, color, colorless
+#Gaboxadol
+O=C1/C2=C(\ON1)CNCC2, psychoactive, yes
 #Geranyl acetate
 O=C(OC/C=C(/CC/C=C(\C)C)C)C, odor, floral+green+waxy, color, colorless, toxic, no, taste, sweet
 #GHB
@@ -32,6 +34,8 @@ O=C(O)CCCO, psychoactive, yes, toxic, medium
 O=C(O[C@@H]2Cc3c(O[C@@H]2c1cc(O)c(O)c(O)c1)cc(O)cc3O)c4cc(O)c(O)c(O)c4, solubility, soluble, toxic, low
 #Humulone
 O=C(\C1=C(/O)\C(=C(\O)[C@](O)(C1=O)C\C=C(/C)C)C\C=C(/C)C)CC(C)C, taste, bitter, acidbase, acid
+#Hydrazine
+NN, color, colorless, odor, fishy/amine, toxic, high, redox, reducing
 #Lactic acid
 CC(O)C(=O)O, acidbase, acid, solubility, soluble, taste, sour, color, colorless, odor, sour
 #Lugduname
@@ -46,6 +50,8 @@ O=COC, odor, ethereal/solvent, color, colorless
 [N+](=O)(O)[O-], color, colorless, odor, pungent/acrid, acidbase, acid, toxic, high, redox, oxidising
 #Piracetam
 O=C1N(CC(=O)N)CCC1, psychoactive, yes
+#Potassium Bromide
+[K+].[Br-], psychoactive, yes, color, colorless, taste, sweet+bitter+salty, toxic, low
 #Succinic Acid
 C(CC(=O)O)C(=O)O, acidbase, acid, solubility, soluble, odor, odorless, taste, sour, color, colorless
 #Tartaric Acid 
