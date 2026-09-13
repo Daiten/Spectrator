@@ -38,6 +38,8 @@ O=C(\C1=C(/O)\C(=C(\O)[C@](O)(C1=O)C\C=C(/C)C)C\C=C(/C)C)CC(C)C, taste, bitter, 
 NN, color, colorless, odor, fishy/amine, toxic, high, redox, reducing
 #Lactic acid
 CC(O)C(=O)O, acidbase, acid, solubility, soluble, taste, sour, color, colorless, odor, sour
+#Lithium hydroxide
+[Li+].[OH-], acidbase, base, color, colorless, solubility, soluble, odor, odorless
 #Lugduname
 N#Cc1ccc(cc1)N/C(NCC(O)=O)=N\Cc2cccc3OCOc23, taste, sweet
 #Malic acid
@@ -48,10 +50,14 @@ COC(=O)c1c(N)cccc1, odor, fruity, color, colorless, taste, bitter, solubility, s
 O=COC, odor, ethereal/solvent, color, colorless
 #Nitric acid
 [N+](=O)(O)[O-], color, colorless, odor, pungent/acrid, acidbase, acid, toxic, high, redox, oxidising
+#Phenytoin
+C1=CC=C(C=C1)C2(C(=O)NC(=O)N2)C3=CC=CC=C3, toxic, low, psychoactive, yes
 #Piracetam
 O=C1N(CC(=O)N)CCC1, psychoactive, yes
 #Potassium Bromide
 [K+].[Br-], psychoactive, yes, color, colorless, taste, sweet+bitter+salty, toxic, low
+#Silver Chromate
+[Ag+].[Ag+].[O-][Cr]([O-])(=O)=O, color, red, redox, oxidising, toxic, high
 #Succinic Acid
 C(CC(=O)O)C(=O)O, acidbase, acid, solubility, soluble, odor, odorless, taste, sour, color, colorless
 #Tartaric Acid 
